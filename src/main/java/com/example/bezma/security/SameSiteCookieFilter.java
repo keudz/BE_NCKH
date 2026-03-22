@@ -1,4 +1,4 @@
-package com.example.bezma.Security;
+package com.example.bezma.security;
 
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;

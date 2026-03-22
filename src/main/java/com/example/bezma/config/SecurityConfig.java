@@ -1,11 +1,10 @@
-package com.example.bezma.Config;
+package com.example.bezma.config;
 
-import com.example.bezma.Security.JwtAuthenticationFilter;
+import com.example.bezma.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 //import org.example.be_eproject_sem4.Service.OAuth2.CustomOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
