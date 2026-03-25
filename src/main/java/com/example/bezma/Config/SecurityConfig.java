@@ -43,6 +43,7 @@ public class SecurityConfig {
                         // 1. Public endpoints - ai cũng truy cập được (không cần token)
                         .requestMatchers(
                                 "/api/auth/register", // Đăng ký
+
                                 "/api/auth/login/basic", // Đăng nhập
                                 "/api/auth/logout",
                                 "/api/auth/login/zalo"
