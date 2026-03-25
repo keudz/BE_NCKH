@@ -1,4 +1,4 @@
-package com.example.bezma.Security;
+package com.example.bezma.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

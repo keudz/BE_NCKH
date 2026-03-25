@@ -1,18 +1,13 @@
-package com.example.bezma.Security;
+package com.example.bezma.security;
 
 import lombok.RequiredArgsConstructor;
-import com.example.demo.Entity.User;
-import com.example.demo.Repository.UserRepository;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import com.example.bezma.entity.user.User;
+import com.example.bezma.repository.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.aUserDetailsService;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Collection;
-import java.util.Collections;
 
 @Service
 @RequiredArgsConstructor

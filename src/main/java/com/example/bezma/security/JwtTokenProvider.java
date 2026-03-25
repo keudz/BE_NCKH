@@ -1,12 +1,12 @@
-package com.example.demo.Security;
+package com.example.bezma.security;
 
-import com.example.bezma.Security.CustomUserDetailsService;
+import com.example.bezma.security.CustomUserDetailsService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import com.example.demo.Entity.User;
+import com.example.bezma.entity.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -60,7 +59,7 @@ public class JwtTokenProvider {
             // QUAN TRỌNG: Load UserDetails xịn từ DB
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-            // Trả về Token với Principal là UserDetails (User entity)
+            // Trả về Token với Principal là UserDetails (User base)
             return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         } catch (Exception e) {
             return null;
