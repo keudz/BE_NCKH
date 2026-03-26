@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter; // Thêm import này
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,6 +23,8 @@ import java.util.Set;
         @Index(name = "idx_user_fullname", columnList = "full_name"),
         @Index(name = "idx_user_phone", columnList = "phone_number")
 })
+// Kích hoạt filter với điều kiện cột tenant_id trong DB phải bằng tham số truyền vào
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 @Getter
 @Setter
 @Builder
