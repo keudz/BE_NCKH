@@ -1,4 +1,4 @@
-package com.example.bezma.Entity.user;
+package com.example.bezma.entity.user;
 
 import com.example.bezma.common.base.BaseEntity;
 import com.example.bezma.entity.auth.Permission;
