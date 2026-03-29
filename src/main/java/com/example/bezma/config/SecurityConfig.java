@@ -42,10 +42,11 @@ public class SecurityConfig {
                         // 1. Public endpoints - ai cũng truy cập được (không cần token)
                         .requestMatchers(
                                 "/api/auth/register", // Đăng ký
-
+                                "/api/v1/tenants/public/register",
                                 "/api/auth/login/basic", // Đăng nhập
                                 "/api/auth/logout",
-                                "/api/auth/login/zalo"
+                                "/api/auth/login/zalo",
+                                "/api/v1/tenants/public/verify"
                         ).permitAll()
 
                         // 2. Swagger UI + OpenAPI docs - phải public hoàn toàn

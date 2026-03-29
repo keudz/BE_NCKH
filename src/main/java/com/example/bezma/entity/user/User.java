@@ -1,4 +1,4 @@
-package com.example.bezma.Entity.user;
+package com.example.bezma.entity.user;
 
 import com.example.bezma.common.base.BaseEntity;
 import com.example.bezma.entity.auth.Permission;
@@ -23,8 +23,6 @@ import java.util.Set;
         @Index(name = "idx_user_fullname", columnList = "full_name"),
         @Index(name = "idx_user_phone", columnList = "phone_number")
 })
-// Kích hoạt filter với điều kiện cột tenant_id trong DB phải bằng tham số truyền vào
-@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 @Getter
 @Setter
 @Builder

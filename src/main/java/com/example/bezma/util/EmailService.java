@@ -32,16 +32,16 @@ public class EmailService {
         // Tự động nhận http://localhost:8080 (dev) hoặc domain thật (prod)
         String verificationUrl = String.format("%s/api/v1/tenants/public/verify?token=%s", baseUrl, token);
 
-        String subject = "[EVENT POS] Xác thực email để kích hoạt gian hàng";
+        String subject = "[LaptopHN POS] Xác thực email để kích hoạt gian hàng";
         String content = """
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #1e40af;">Chào mừng bạn đến với EVENT POS!</h2>
+                <h2 style="color: #1e40af;">Chào mừng bạn đến với LaptopHN POS!</h2>
                 <p>Cảm ơn bạn đã đăng ký. Vui lòng click nút dưới đây để xác thực email:</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="%s" style="background: #1e40af; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">Xác thực ngay</a>
                 </div>
                 <hr>
-                <p style="color: #666; font-size: 12px;">Trân trọng,<br>Đội ngũ EVENT POS</p>
+                <p style="color: #666; font-size: 12px;">Trân trọng,<br>Đội ngũ LaptopHN POS</p>
             </div>
             """.formatted(verificationUrl);
 
