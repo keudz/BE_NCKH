@@ -52,7 +52,7 @@ public class Tenant extends BaseEntity {
     private boolean active = true;
     @Enumerated(EnumType.STRING)
     @Column(name = "plan_type", length = 20)
-    private PlanType planType; // FREE, PREMIUM...
+    private PlanType planType;
 
     // --- Verification Flow ---
     @Column(name = "verification_token")

@@ -7,5 +7,4 @@ import com.example.bezma.dto.res.user.UserDetailResponse;
 public class AuthResponse {
     private String accessToken;
     private String refreshToken;
-    private UserDetailResponse user;
 }

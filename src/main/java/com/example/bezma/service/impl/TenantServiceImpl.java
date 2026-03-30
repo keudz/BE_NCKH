@@ -17,6 +17,7 @@ import com.example.bezma.repository.RoleRepository;
 import com.example.bezma.repository.TenantRepository;
 import com.example.bezma.repository.UserRepository;
 import com.example.bezma.service.iService.ITenantService;
+import com.example.bezma.util.DataUtils;
 import com.example.bezma.util.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -91,17 +93,21 @@ public class TenantServiceImpl implements ITenantService {
         // Giả sử trong DB ông đặt tên Role là "ADMIN" hoặc "TENANT_ADMIN"
         Role adminRole = roleRepository.findByName("ADMIN")
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+        String generatedSlug = DataUtils.generateSlug(request.getName());
+
 
         // 3. Tạo Tenant
         Tenant tenant = tenantMapper.toEntity(request);
         String token = UUID.randomUUID().toString();
-        tenant.setTenantCode("LD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        tenant.setTenantCode(request.getName().toLowerCase(Locale.ROOT));
         tenant.setVerificationToken(token);
-        tenant.setPlanType(PlanType.FREE);
+        tenant.setPlanType(request.getPlanType());
         tenant.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
         tenant.setStatusConfirm(RegistrationStatus.PENDING_VERIFICATION);
         tenant.setActive(false);
+        tenant.setSlug(generatedSlug);
         tenant = tenantRepository.save(tenant);
+
 
         // 4. Tạo User Admin cho Tenant đó và gán Role
         String defaultPass = "123456";

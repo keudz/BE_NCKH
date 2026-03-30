@@ -23,8 +23,6 @@ import java.util.Set;
         @Index(name = "idx_user_fullname", columnList = "full_name"),
         @Index(name = "idx_user_phone", columnList = "phone_number")
 })
-// Kích hoạt filter với điều kiện cột tenant_id trong DB phải bằng tham số truyền vào
-@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 @Getter
 @Setter
 @Builder
