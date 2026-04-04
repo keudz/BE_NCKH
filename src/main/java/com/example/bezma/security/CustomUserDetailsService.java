@@ -1,7 +1,6 @@
 package com.example.bezma.security;
 
 import lombok.RequiredArgsConstructor;
-import com.example.bezma.entity.user.User;
 import com.example.bezma.repository.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
