@@ -34,9 +34,25 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
-    // 3. Bắt các lỗi không xác định (Tránh văng trace code ra ngoài)
+    // 3. Bắt lỗi Validation (@Valid)
+    @ExceptionHandler(value = org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<?>> handleValidationExceptions(
+            org.springframework.web.bind.MethodArgumentNotValidException exception) {
+        String message = exception.getBindingResult().getFieldError().getDefaultMessage();
+
+        ApiResponse<?> apiResponse = ApiResponse.builder()
+                .code(ErrorCode.INVALID_INPUT.getCode())
+                .message(message != null ? message : ErrorCode.INVALID_INPUT.getMessage())
+                .build();
+
+        return ResponseEntity.status(ErrorCode.INVALID_INPUT.getStatusCode()).body(apiResponse);
+    }
+
+    // 4. Bắt các lỗi không xác định (Tránh văng trace code ra ngoài)
     @ExceptionHandler(value = Exception.class)
-    public ResponseEntity<ApiResponse<?>> handleRuntimeException(RuntimeException exception) {
+    // public ResponseEntity<ApiResponse<?>> handleRuntimeException(RuntimeException
+    // exception)
+    public ResponseEntity<ApiResponse<?>> handleRuntimeException(Exception exception) {
         ApiResponse<?> apiResponse = ApiResponse.builder()
                 .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
                 .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage())

@@ -43,4 +43,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId")
     Optional<User> findFirstByTenantId(@Param("tenantId") Long tenantId);
     Optional<User> findByZaloId(String zaloId);
+    Optional<User> findByPhone(String phone);
 }

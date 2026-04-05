@@ -28,6 +28,7 @@ public class RedisConfig {
         template.afterPropertiesSet();
         return template;
     }
+
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory connectionFactory) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();

@@ -1,6 +1,6 @@
 package com.example.bezma.security;
 
-import com.example.bezma.security.CustomUserDetailsService;
+// import com.example.bezma.security.CustomUserDetailsService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -57,7 +57,7 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .subject(user.getUsername())
                 .claim("userId", user.getId())
-                .claim("tenantId", user.getTenant().getName())
+                .claim("tenantId", user.getTenant().getId())
                 .claim("role", user.getRole().getName()) // Thêm role name cho dễ check ở FE
                 .claim("authorities", authorities)
                 .issuedAt(Date.from(now))
@@ -74,7 +74,7 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .subject(user.getUsername())
                 .claim("userId", user.getId())
-                .claim("tenantId", user.getTenant().getName())
+                .claim("tenantId", user.getTenant().getId())
                 .claim("role", user.getRole().getName())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))

@@ -33,7 +33,8 @@ public enum ErrorCode {
     USER_ALREADY_EXISTS(1005, "Tên đăng nhập đã tồn tại", HttpStatus.CONFLICT),
     EMAIL_ALREADY_EXISTS(1006, "Email đã được đăng ký trước đó", HttpStatus.CONFLICT),
     ROLE_NOT_FOUND(1009, "Vai trò (Role) không tồn tại trên hệ thống", HttpStatus.NOT_FOUND),
-    USER_NOT_ACTIVE(1013, "Tài khoản hiện đang bị khóa", HttpStatus.FORBIDDEN);
+    USER_NOT_ACTIVE(1013, "Tài khoản hiện đang bị khóa", HttpStatus.FORBIDDEN),
+    INVALID_INPUT(1014, "Username hoặc password không hợp lệ", HttpStatus.BAD_REQUEST);
     private final int code;
     private final String message;
     private final HttpStatus statusCode;

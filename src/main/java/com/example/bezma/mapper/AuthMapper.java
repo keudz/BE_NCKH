@@ -6,8 +6,12 @@ import com.example.bezma.entity.user.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+import org.mapstruct.ReportingPolicy;
+
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface AuthMapper {
+    @Mapping(target = "avatarZalo", source = "avatar")
+    @Mapping(target = "subPhone", source = "phone")
     UserDetailResponse toUserDetail(User user);
 
     @Mapping(target = "accessToken", source = "accessToken")
