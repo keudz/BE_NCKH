@@ -15,6 +15,7 @@ public interface UserMapper {
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "verificationToken", ignore = true)
     @Mapping(target = "verificationTokenExpiry", ignore = true)
+    @Mapping(target = "role", ignore = true)
     User toEntity(UserRegistrationRequest request);
 
     @Mapping(target = "tenantId", source = "tenant.id")

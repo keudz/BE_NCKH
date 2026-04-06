@@ -20,4 +20,8 @@ public interface TenantRepository extends JpaRepository<Tenant, Long> {
     Object findSummaryById(@Param("id") Long id);
     Optional<Tenant> findByVerificationToken(String token);
     Optional<Tenant> findById(Long id);
+    boolean existsByDomain(String domain);
+    boolean existsByDomainAndIdNot(String domain, Long id);
+    boolean existsByTenantCode(String tenantCode);
+    boolean existsByTenantCodeAndIdNot(String tenantCode, Long id);
 }
