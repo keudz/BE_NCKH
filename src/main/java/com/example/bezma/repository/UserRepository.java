@@ -13,6 +13,7 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u " +
+            "LEFT JOIN FETCH u.tenant t " +
             "LEFT JOIN FETCH u.role r " +
             "LEFT JOIN FETCH r.permissions " +
             "LEFT JOIN FETCH u.permissions " +
@@ -43,4 +44,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId")
     Optional<User> findFirstByTenantId(@Param("tenantId") Long tenantId);
     Optional<User> findByZaloId(String zaloId);
+
+
+
 }
