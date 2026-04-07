@@ -2,6 +2,7 @@ package com.example.bezma.service.impl;
 
 import com.example.bezma.dto.req.auth.LoginRequest;
 import com.example.bezma.dto.req.auth.RefreshTokenRequest;
+import com.example.bezma.dto.req.auth.ZaloLoginRequest;
 import com.example.bezma.dto.res.auth.AuthResponse;
 import com.example.bezma.entity.user.User;
 import com.example.bezma.repository.UserRepository;
@@ -20,6 +21,7 @@ public class AuthServiceImpl implements IAuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
+    private final ZaloServiceImpl zaloService;
 
     @Override
     public AuthResponse login(LoginRequest request) {
@@ -74,6 +76,40 @@ public class AuthServiceImpl implements IAuthService {
                 .username(user.getUsername())
                 .role(user.getRole().getName())
                 .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
+                .build();
+    }
+
+    // Nhớ import ZaloService và thêm vào phần @RequiredArgsConstructor
+
+
+    @Override
+    public AuthResponse loginZalo(ZaloLoginRequest request) {
+        // Bước 4 (trong ảnh): Xác thực chéo lấy Zalo ID
+        String zaloId = zaloService.getZaloIdFromToken(request.getZaloToken());
+
+        // Bước 5 (trong ảnh): Tìm User và check B2B Tenant
+        User user = userRepository.findByZaloId(zaloId)
+                .orElseThrow(() -> new RuntimeException("Tài khoản Zalo này chưa được liên kết với hệ thống!"));
+
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            throw new RuntimeException("Tài khoản đã bị vô hiệu hóa!");
+        }
+
+        // BẢO MẬT MULTI-TENANT: Nick Zalo này có đúng là nhân viên của công ty (tenantId) này không?
+        if (!user.getTenant().getId().equals(request.getTenantId())) {
+            throw new RuntimeException("Tài khoản Zalo của bạn không thuộc doanh nghiệp này!");
+        }
+
+        // Bước 6 (trong ảnh): Cấp chìa khóa (Tạo Token của riêng hệ thống BE)
+        String accessToken = jwtTokenProvider.generateAccessToken(user);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .username(user.getUsername())
+                .role(user.getRole().getName())
+                .tenantId(user.getTenant().getId())
                 .build();
     }
 }

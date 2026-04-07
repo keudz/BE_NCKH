@@ -3,6 +3,7 @@ package com.example.bezma.controller;
 import com.example.bezma.common.res.ApiResponse;
 import com.example.bezma.dto.req.auth.LoginRequest;
 import com.example.bezma.dto.req.auth.RefreshTokenRequest;
+import com.example.bezma.dto.req.auth.ZaloLoginRequest;
 import com.example.bezma.dto.res.auth.AuthResponse;
 import com.example.bezma.service.iService.IAuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -64,6 +65,29 @@ public class AuthController {
 
         return ApiResponse.<Void>builder()
                 .message("Đăng xuất thành công!")
+                .build();
+    }
+
+    @Operation(summary = "Đăng nhập bằng Zalo")
+    @PostMapping("/login/zalo")
+    public ApiResponse<AuthResponse> loginZalo(
+            @RequestBody @Valid ZaloLoginRequest request,
+            HttpServletResponse response) {
+        AuthResponse data = authService.loginZalo(request);
+
+
+        ResponseCookie cookie = ResponseCookie.from("access_token", data.getAccessToken())
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(24 * 60 * 60) // Sống 1 ngày
+                .sameSite("None")
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        return ApiResponse.<AuthResponse>builder()
+                .data(data)
+                .message("Đăng nhập Zalo thành công!")
                 .build();
     }
 }
