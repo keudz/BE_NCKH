@@ -95,6 +95,13 @@ public class User extends BaseEntity implements UserDetails {
     @Column(unique = true)
     private String zaloId;
 
+    @Column(name = "face_embedding", columnDefinition = "LONGTEXT")
+    private String faceEmbedding;
+
+    @Column(name = "is_face_registered")
+    @Builder.Default
+    private Boolean isFaceRegistered = false;
+
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -34,7 +34,11 @@ public enum ErrorCode {
     EMAIL_ALREADY_EXISTS(1006, "Email đã được đăng ký trước đó", HttpStatus.CONFLICT),
     ROLE_NOT_FOUND(1009, "Vai trò (Role) không tồn tại trên hệ thống", HttpStatus.NOT_FOUND),
     USER_NOT_ACTIVE(1013, "Tài khoản hiện đang bị khóa", HttpStatus.FORBIDDEN),
-    INVALID_INPUT(1014, "Username hoặc password không hợp lệ", HttpStatus.BAD_REQUEST);
+    INVALID_INPUT(1014, "Username hoặc password không hợp lệ", HttpStatus.BAD_REQUEST),
+
+    // --- 6. Nhóm AI & Attendance Errors ---
+    FACE_NOT_DETECTED(6001, "Không tìm thấy khuôn mặt trong ảnh. Vui lòng chụp rõ mặt.", HttpStatus.BAD_REQUEST),
+    AI_SERVICE_ERROR(6002, "Lỗi kết nối hoặc xử lý từ hệ thống AI", HttpStatus.INTERNAL_SERVER_ERROR);
     private final int code;
     private final String message;
     private final HttpStatus statusCode;

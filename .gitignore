@@ -32,5 +32,23 @@ build/
 ### VS Code ###
 .vscode
 .env
+.env.*
+
+### Python ###
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+temp_images/
+.python-version
+.pytest_cache/
+
+### Logs & Temp ###
+*.log
+logs/
+temp/
+tmp/
+.DS_Store
+
 
 
