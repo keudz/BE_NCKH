@@ -1,14 +1,14 @@
 package com.example.bezma.controller;
 
 import com.example.bezma.common.res.ApiResponse;
+import com.example.bezma.dto.req.user.UserUpdateRequest;
 import com.example.bezma.dto.res.user.UserSummaryResponse;
 import com.example.bezma.service.iService.IUserService; // Đổi import này
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -35,6 +35,31 @@ public class UserController {
         return ApiResponse.<List<UserSummaryResponse>>builder()
                 .data(userService.getAllUsersInMyTenant())
                 .message("Lấy danh sách nhân viên thành công!")
+                .build();
+    }
+
+    @Operation(summary = "Cập nhật thông tin nhân viên")
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('TENANT_ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<UserSummaryResponse> updateUser(
+            @PathVariable(value = "id", required = false) Long id,
+            @RequestBody UserUpdateRequest request) {
+
+        return ApiResponse.<UserSummaryResponse>builder()
+                .data(userService.updateUser(id, request))
+                .message("Cập nhật thông tin nhân viên thành công!")
+                .build();
+    }
+
+    @Operation(summary = "Xóa (ẩn) nhân viên khỏi hệ thống")
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('TENANT_ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<Void> deleteUser(@PathVariable("id") Long targetUserId) {
+
+        userService.deleteUser(targetUserId);
+
+        return ApiResponse.<Void>builder()
+                .message("Xóa nhân viên thành công!")
                 .build();
     }
 }

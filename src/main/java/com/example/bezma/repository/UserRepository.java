@@ -52,6 +52,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByPhone(String phone);
 
+    // Thêm hàm này nếu chưa có để check trùng lặp khi đổi email
+    Optional<User> findByEmail(String email);
 
 
 
