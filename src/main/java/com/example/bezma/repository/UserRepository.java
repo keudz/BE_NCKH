@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -44,6 +46,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId")
     Optional<User> findFirstByTenantId(@Param("tenantId") Long tenantId);
     Optional<User> findByZaloId(String zaloId);
+
+    // Lấy toàn bộ danh sách nhân viên của 1 doanh nghiệp (Không phân trang)
+    List<User> findAllByTenantId(Long tenantId);
+
+    Optional<User> findByPhone(String phone);
+
+
 
 
 

@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
@@ -24,6 +26,15 @@ public class UserController {
         return ApiResponse.<UserSummaryResponse>builder()
                 .data(userService.getMyProfile())
                 .message("Lấy thông tin cá nhân thành công!")
+                .build();
+    }
+
+    @Operation(summary = "Lấy danh sách toàn bộ nhân viên trong cùng doanh nghiệp")
+    @GetMapping
+    public ApiResponse<List<UserSummaryResponse>> getAllUsers() {
+        return ApiResponse.<List<UserSummaryResponse>>builder()
+                .data(userService.getAllUsersInMyTenant())
+                .message("Lấy danh sách nhân viên thành công!")
                 .build();
     }
 }
