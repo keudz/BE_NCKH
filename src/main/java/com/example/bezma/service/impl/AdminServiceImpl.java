@@ -1,11 +1,14 @@
 package com.example.bezma.service.impl;
 
+import com.example.bezma.common.enumCom.ErrorCode;
+import com.example.bezma.dto.req.admin.AssignRoleRequest;
 import com.example.bezma.dto.req.user.UserCreateRequest;
 import com.example.bezma.dto.res.user.UserCreateResponse;
 import com.example.bezma.entity.auth.Role;
 import com.example.bezma.entity.tenant.Tenant;
 import com.example.bezma.entity.user.User;
 import com.example.bezma.entity.user.UserStatus;
+import com.example.bezma.exception.AppException;
 import com.example.bezma.mapper.UserMapper;
 import com.example.bezma.repository.RoleRepository;
 import com.example.bezma.repository.TenantRepository;
@@ -53,6 +56,24 @@ public class AdminServiceImpl implements IAdminService {
         response.setId(savedUser.getId());
         response.setEmail(savedUser.getEmail());
         return response;
+    }
 
+    @Override
+    @Transactional
+    public void assignRole(Long tenantId, AssignRoleRequest req) {
+
+        User user = userRepository.findByIdAndTenantId(req.getUserId(), tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        if (user.getRole() != null && req.getRole().equals(user.getRole().getName())) {
+            throw new AppException(ErrorCode.USER_ALREADY_EMPLOYEE);
+        }
+
+        Role role = roleRepository.findByName(req.getRole())
+                .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+
+        user.setRole(role);
+
+        userRepository.save(user);
     }
 }
