@@ -1,13 +1,13 @@
 package com.example.bezma.mapper;
 
-import com.example.bezma.dto.req.user.UserCreateRequest;
+//import com.example.bezma.dto.req.user.UserCreateRequest;
 import com.example.bezma.dto.req.user.UserRegistrationRequest;
 import com.example.bezma.dto.req.user.UserUpdateRequest;
 import com.example.bezma.dto.res.user.UserCreateResponse;
 import com.example.bezma.dto.res.user.UserDetailResponse;
 import com.example.bezma.dto.res.user.UserSummaryResponse;
-import com.example.bezma.entity.auth.Role;
-import com.example.bezma.entity.tenant.Tenant;
+//import com.example.bezma.entity.auth.Role;
+//import com.example.bezma.entity.tenant.Tenant;
 import com.example.bezma.entity.user.User;
 import org.mapstruct.*;
 

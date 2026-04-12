@@ -32,8 +32,8 @@ public class AuthServiceImpl implements IAuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
     private final ZaloServiceImpl zaloService;
-    private RoleRepository roleRepository;
-    private TenantRepository tenantRepository;
+    private final RoleRepository roleRepository;
+    private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override

@@ -21,7 +21,7 @@ public class AdminController {
     @Operation(summary = "Tạo người dùng mới cho Tenant")
     @PostMapping("tenants/{tenantId}/users")
     public ApiResponse<UserCreateResponse> createUser(@PathVariable("tenantId") Long tenantId,
-                                            @RequestBody @Valid UserCreateRequest req) {
+            @RequestBody @Valid UserCreateRequest req) {
 
         return ApiResponse.<UserCreateResponse>builder()
                 .data(adminService.createUser(req, tenantId))
