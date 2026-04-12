@@ -27,7 +27,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class User extends BaseEntity implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -80,17 +80,17 @@ public class User extends BaseEntity implements UserDetails {
     @Builder.Default
     private Boolean isVerified = false;
 
+    @Column(name = "is_deleted")
+    @Builder.Default
+    private Boolean isDeleted = false;
+
     @Column(name = "verification_token")
     private String verificationToken;
 
     @Column(name = "verification_token_expiry")
     private LocalDateTime verificationTokenExpiry;
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "user_permissions",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "permission_id")
-    )
+    @JoinTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "permission_id"))
     private Set<Permission> permissions;
     @Column(unique = true)
     private String zaloId;
@@ -103,18 +103,15 @@ public class User extends BaseEntity implements UserDetails {
 
         // 1. Lấy quyền từ Role (role_permissions)
         if (this.role != null && this.role.getPermissions() != null) {
-            this.role.getPermissions().forEach(p ->
-                    authorities.add(new SimpleGrantedAuthority(p.getName()))
-            );
-            // Thêm chính cái Role đó với prefix ROLE_ (Dùng cho hasRole trong SecurityConfig)
+            this.role.getPermissions().forEach(p -> authorities.add(new SimpleGrantedAuthority(p.getName())));
+            // Thêm chính cái Role đó với prefix ROLE_ (Dùng cho hasRole trong
+            // SecurityConfig)
             authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role.getName()));
         }
 
         // 2. Lấy thêm quyền đặc cách được gán trực tiếp (user_permissions)
         if (this.permissions != null) {
-            this.permissions.forEach(p ->
-                    authorities.add(new SimpleGrantedAuthority(p.getName()))
-            );
+            this.permissions.forEach(p -> authorities.add(new SimpleGrantedAuthority(p.getName())));
         }
 
         return authorities;
@@ -122,26 +119,36 @@ public class User extends BaseEntity implements UserDetails {
 
     @Override
     @JsonIgnore
-    public String getPassword() { return this.password; }
+    public String getPassword() {
+        return this.password;
+    }
 
     // Các hàm này trả về true và không liên quan tới DB
     @Override
     @Transient // Báo cho Hibernate: "Đừng có tìm cột này trong DB"
     @JsonIgnore
-    public boolean isAccountNonExpired() { return true; }
+    public boolean isAccountNonExpired() {
+        return true;
+    }
 
     @Override
     @Transient
     @JsonIgnore
-    public boolean isAccountNonLocked() { return true; }
+    public boolean isAccountNonLocked() {
+        return true;
+    }
 
     @Override
     @Transient
     @JsonIgnore
-    public boolean isCredentialsNonExpired() { return true; }
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
 
     @Override
     @Transient
     @JsonIgnore
-    public boolean isEnabled() { return true; }
+    public boolean isEnabled() {
+        return true;
+    }
 }

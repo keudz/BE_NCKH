@@ -14,48 +14,51 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    @Query("SELECT u FROM User u " +
-            "LEFT JOIN FETCH u.tenant t " +
-            "LEFT JOIN FETCH u.role r " +
-            "LEFT JOIN FETCH r.permissions " +
-            "LEFT JOIN FETCH u.permissions " +
-            "WHERE u.username = :username")
-    Optional<User> findByUsername(@Param("username") String username);
+        @Query("SELECT u FROM User u " +
+                        "LEFT JOIN FETCH u.tenant t " +
+                        "LEFT JOIN FETCH u.role r " +
+                        "LEFT JOIN FETCH r.permissions " +
+                        "LEFT JOIN FETCH u.permissions " +
+                        "WHERE u.username = :username")
+        Optional<User> findByUsername(@Param("username") String username);
 
-    @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId AND u.isActive = true")
-    Page<User> findAllByTenantId(@Param("tenantId") Long tenantId, Pageable pageable);
-    @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId " +
-            "AND (LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR u.phone LIKE CONCAT('%', :keyword, '%'))")
-    Page<User> searchMembersInTenant(@Param("tenantId") Long tenantId, @Param("keyword") String keyword, Pageable pageable);
+        @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId AND u.isActive = true")
+        Page<User> findAllByTenantId(@Param("tenantId") Long tenantId, Pageable pageable);
 
-    Optional<User> findByVerificationToken(String token);
+        @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId " +
+                        "AND (LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+                        "OR u.phone LIKE CONCAT('%', :keyword, '%'))")
+        Page<User> searchMembersInTenant(@Param("tenantId") Long tenantId, @Param("keyword") String keyword,
+                        Pageable pageable);
 
-    // --- CHECK TỒN TẠI (Tối ưu performance) ---
+        Optional<User> findByVerificationToken(String token);
 
-    @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.username = :username")
-    boolean existsByUsername(@Param("username") String username);
+        // --- CHECK TỒN TẠI (Tối ưu performance) ---
 
-    @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.email = :email")
-    boolean existsByEmail(@Param("email") String email);
+        @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.username = :username")
+        boolean existsByUsername(@Param("username") String username);
 
-    @Modifying
-    @Query("DELETE FROM User u WHERE u.tenant.id = :tenantId")
-    void deleteByTenantId(@Param("tenantId") Long tenantId);
+        @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.email = :email")
+        boolean existsByEmail(@Param("email") String email);
 
-    @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId")
-    Optional<User> findFirstByTenantId(@Param("tenantId") Long tenantId);
-    Optional<User> findByZaloId(String zaloId);
+        @Modifying
+        @Query("DELETE FROM User u WHERE u.tenant.id = :tenantId")
+        void deleteByTenantId(@Param("tenantId") Long tenantId);
 
-    // Lấy toàn bộ danh sách nhân viên của 1 doanh nghiệp (Không phân trang)
-    List<User> findAllByTenantId(Long tenantId);
+        @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId")
+        Optional<User> findFirstByTenantId(@Param("tenantId") Long tenantId);
 
-    Optional<User> findByPhone(String phone);
+        Optional<User> findByZaloId(String zaloId);
 
-    // Thêm hàm này nếu chưa có để check trùng lặp khi đổi email
-    Optional<User> findByEmail(String email);
+        Optional<User> findByPhone(String phone);
 
+        // Lấy toàn bộ danh sách nhân viên của 1 doanh nghiệp theo trạng thái xóa
+        List<User> findAllByTenantIdAndIsDeleted(Long tenantId, Boolean isDeleted);
 
+        // Lấy toàn bộ danh sách nhân viên của 1 doanh nghiệp (Không phân trang)
+        List<User> findAllByTenantId(Long tenantId);
 
+        // Thêm hàm này nếu chưa có để check trùng lặp khi đổi email
+        Optional<User> findByEmail(String email);
 
 }

@@ -43,7 +43,7 @@ public class UserServiceImpl implements IUserService {
                 .build();
     }
     @Override
-    public List<UserSummaryResponse> getAllUsersInMyTenant() {
+    public List<UserSummaryResponse> getAllUsersInMyTenant(Boolean isDeleted) {
 
         // 1. Xem ai đang gọi API này (Lấy SĐT hoặc Username từ Token)
         String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -53,7 +53,9 @@ public class UserServiceImpl implements IUserService {
 
         Long myTenantId = currentUser.getTenant().getId();
 
-        List<User> users = userRepository.findAllByTenantId(myTenantId);
+        // 2. Lấy danh sách dựa trên isDeleted (mặc định false nếu null)
+        Boolean filterDeleted = (isDeleted != null) ? isDeleted : false;
+        List<User> users = userRepository.findAllByTenantIdAndIsDeleted(myTenantId, filterDeleted);
 
         return users.stream().map(user -> UserSummaryResponse.builder()
                 .id(user.getId())
@@ -63,6 +65,7 @@ public class UserServiceImpl implements IUserService {
                 .phone(user.getPhone())
                 .avatar(user.getAvatar())
                 .isActive(user.getIsActive())
+                .isDeleted(user.getIsDeleted())
                 .roleName(user.getRole() != null ? user.getRole().getName() : null)
                 .tenantId(myTenantId)
                 .build()
@@ -156,20 +159,37 @@ public class UserServiceImpl implements IUserService {
 
         //  CHỐT 2: Admin không được tự tay bóp dái (xóa chính mình)
         if (admin.getId().equals(targetUser.getId())) {
-            // Bạn có thể tạo thêm ErrorCode.CANNOT_DELETE_SELF, hoặc dùng tạm cái này
             throw new AppException(ErrorCode.INVALID_MESSAGE);
         }
 
-        // 3. THỰC HIỆN XÓA MỀM (Soft Delete)
+        // 3. THỰC HIỆN XÓA MỀM (Soft Delete) theo logic is_deleted = 1
         targetUser.setIsActive(false);
-        // Nếu Entity User của bạn có thuộc tính status (ví dụ Enum UserStatus), hãy set nó thành DELETED
-        targetUser.setStatus(UserStatus.DELETED); // HOẶC UserStatus.DELETED tùy team bạn định nghĩa
-
-        // Dọn dẹp dữ liệu nhạy cảm (Tùy chọn)
-        // targetUser.setPhone(targetUser.getPhone() + "_deleted_" + System.currentTimeMillis());
-        // targetUser.setEmail(null);
+        targetUser.setIsDeleted(true);
+        targetUser.setStatus(UserStatus.DELETED);
 
         // 4. Lưu lại sự thay đổi
+        userRepository.save(targetUser);
+    }
+
+    @Override
+    @Transactional
+    public void restoreUser(Long targetUserId) {
+        String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
+        User admin = userRepository.findByPhone(currentIdentifier)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (!admin.getTenant().getId().equals(targetUser.getTenant().getId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 3. Khôi phục
+        targetUser.setIsDeleted(false);
+        targetUser.setIsActive(true);
+        targetUser.setStatus(UserStatus.ACTIVE);
+
         userRepository.save(targetUser);
     }
 

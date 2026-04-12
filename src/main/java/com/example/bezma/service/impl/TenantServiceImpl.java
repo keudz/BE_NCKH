@@ -6,7 +6,7 @@ import com.example.bezma.dto.req.tenant.TenantUpdateRequest;
 import com.example.bezma.dto.res.tenant.TenantDetailResponse;
 import com.example.bezma.dto.res.tenant.TenantSummaryResponse;
 import com.example.bezma.entity.auth.Role;
-import com.example.bezma.entity.tenant.PlanType;
+//import com.example.bezma.entity.tenant.PlanType;
 import com.example.bezma.entity.tenant.RegistrationStatus;
 import com.example.bezma.entity.tenant.Tenant;
 import com.example.bezma.entity.user.User;
@@ -57,8 +57,11 @@ public class TenantServiceImpl implements ITenantService {
         String cacheKey = REDIS_PREFIX + slug;
         try {
             Object cached = redisTemplate.opsForValue().get(cacheKey);
-            if (cached != null) return (TenantDetailResponse) cached;
-        } catch (Exception e) { log.warn("Redis Error: {}", e.getMessage()); }
+            if (cached != null)
+                return (TenantDetailResponse) cached;
+        } catch (Exception e) {
+            log.warn("Redis Error: {}", e.getMessage());
+        }
 
         Tenant tenant = tenantRepository.findBySlugActive(slug)
                 .orElseThrow(() -> new AppException(ErrorCode.TENANT_NOT_FOUND));
@@ -95,7 +98,6 @@ public class TenantServiceImpl implements ITenantService {
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
         String generatedSlug = DataUtils.generateSlug(request.getName());
 
-
         // 3. Tạo Tenant
         Tenant tenant = tenantMapper.toEntity(request);
         String token = UUID.randomUUID().toString();
@@ -104,10 +106,9 @@ public class TenantServiceImpl implements ITenantService {
         tenant.setPlanType(request.getPlanType());
         tenant.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
         tenant.setStatusConfirm(RegistrationStatus.PENDING_VERIFICATION);
-        tenant.setActive(false);
+        tenant.setActive(true);
         tenant.setSlug(generatedSlug);
         tenant = tenantRepository.save(tenant);
-
 
         // 4. Tạo User Admin cho Tenant đó và gán Role
         String defaultPass = "123456";
@@ -152,7 +153,8 @@ public class TenantServiceImpl implements ITenantService {
         String tempPassword = redisTemplate.opsForValue().get(redisKey).toString();
 
         if (tempPassword == null) {
-            // Nếu Redis đã hết hạn thì coi như quá trình đăng ký thất bại (bị Listener xóa rồi)
+            // Nếu Redis đã hết hạn thì coi như quá trình đăng ký thất bại (bị Listener xóa
+            // rồi)
             throw new AppException(ErrorCode.REGISTRATION_TIMEOUT);
         }
 

@@ -14,6 +14,7 @@ public class UserSummaryResponse {
     private String phone;
     private String email;
     private Boolean isActive;
+    private Boolean isDeleted;
     private String roleName;
     private String avatar;
 }

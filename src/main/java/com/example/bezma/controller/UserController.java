@@ -3,7 +3,7 @@ package com.example.bezma.controller;
 import com.example.bezma.common.res.ApiResponse;
 import com.example.bezma.dto.req.user.UserUpdateRequest;
 import com.example.bezma.dto.res.user.UserSummaryResponse;
-import com.example.bezma.service.iService.IUserService; // Đổi import này
+import com.example.bezma.service.iService.IUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +29,12 @@ public class UserController {
                 .build();
     }
 
-    @Operation(summary = "Lấy danh sách toàn bộ nhân viên trong cùng doanh nghiệp")
+    @Operation(summary = "Lấy danh sách nhân viên (0: Đang làm việc, 1: Đã xóa)")
     @GetMapping
-    public ApiResponse<List<UserSummaryResponse>> getAllUsers() {
+    public ApiResponse<List<UserSummaryResponse>> getAllUsers(
+            @RequestParam(value = "isDeleted", required = false, defaultValue = "false") Boolean isDeleted) {
         return ApiResponse.<List<UserSummaryResponse>>builder()
-                .data(userService.getAllUsersInMyTenant())
+                .data(userService.getAllUsersInMyTenant(isDeleted))
                 .message("Lấy danh sách nhân viên thành công!")
                 .build();
     }
@@ -60,6 +61,16 @@ public class UserController {
 
         return ApiResponse.<Void>builder()
                 .message("Xóa nhân viên thành công!")
+                .build();
+    }
+
+    @Operation(summary = "Khôi phục nhân viên từ thùng rác")
+    @PatchMapping("/{id}/restore")
+    @PreAuthorize("hasAnyAuthority('TENANT_ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<Void> restoreUser(@PathVariable("id") Long targetUserId) {
+        userService.restoreUser(targetUserId);
+        return ApiResponse.<Void>builder()
+                .message("Khôi phục nhân viên thành công!")
                 .build();
     }
 }

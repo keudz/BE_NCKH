@@ -40,14 +40,13 @@ public class AuthServiceImpl implements IAuthService {
     public AuthResponse login(LoginRequest request) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-            );
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
             User user = (User) authentication.getPrincipal();
 
-            if (Boolean.FALSE.equals(user.getIsActive())) {
-                throw new AppException(ErrorCode.USER_NOT_ACTIVE); // Dùng ErrorCode chuẩn
-            }
+             if (Boolean.FALSE.equals(user.getIsActive())) {
+             throw new AppException(ErrorCode.USER_NOT_ACTIVE); // Dùng ErrorCode chuẩn
+             }
 
             String accessToken = jwtTokenProvider.generateAccessToken(user);
             String refreshToken = jwtTokenProvider.generateRefreshToken(user);
@@ -77,7 +76,6 @@ public class AuthServiceImpl implements IAuthService {
         // 2. Lấy username từ token
         String username = jwtTokenProvider.getUsernameFromToken(requestRefreshToken);
 
-
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
@@ -97,7 +95,6 @@ public class AuthServiceImpl implements IAuthService {
                 .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
                 .build();
     }
-
 
     @Override
     @Transactional
