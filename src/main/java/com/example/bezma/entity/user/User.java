@@ -80,9 +80,6 @@ public class User extends BaseEntity implements UserDetails {
     @Builder.Default
     private Boolean isVerified = false;
 
-    @Column(name = "is_deleted")
-    @Builder.Default
-    private Boolean isDeleted = false;
 
     @Column(name = "verification_token")
     private String verificationToken;

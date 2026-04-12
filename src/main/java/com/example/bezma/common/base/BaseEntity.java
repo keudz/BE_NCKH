@@ -24,7 +24,7 @@ public abstract class BaseEntity {
     @Column(insertable = false)
     private LocalDateTime updatedAt;
     @Column(name = "is_deleted", nullable = false)
-    private boolean deleted = false;
+    private Boolean isDeleted = false;
     @CreatedBy
     private String createdBy;
     @LastModifiedBy

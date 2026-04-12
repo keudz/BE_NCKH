@@ -65,7 +65,6 @@ public class Tenant extends BaseEntity {
     @Builder.Default
     private Boolean isVerified = false;
 
-    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status_confirm", length = 30)
     @Builder.Default
