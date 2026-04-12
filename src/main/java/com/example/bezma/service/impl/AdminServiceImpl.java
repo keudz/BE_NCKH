@@ -16,33 +16,38 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class AdminServiceImpl implements IAdminService {
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
-    private final UserMapper userMapper;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper; // Vẫn giữ để map Response cuối cùng nếu cần
 
     @Override
+    @Transactional
     public UserCreateResponse createUser(UserCreateRequest req, Long tenantId) {
-        // 1. Tìm Tenant từ DB (Bắt buộc vì User cần object Tenant hoàn chỉnh)
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new RuntimeException("Tenant không tồn tại"));
 
-        // 2. Map sang Entity (Lúc này tenant đã có data, MapStruct sẽ set vào User)
-        User user = userMapper.toEntity(req, tenant);
+        User user = new User();
+        user.setEmail(req.getEmail());
+        user.setUsername(req.getEmail());
+        user.setPassword(passwordEncoder.encode("123456")); // password nullable = false
+        user.setTenant(tenant);
+        user.setStatus(UserStatus.PENDING_ACTIVE);
+        user.setIsActive(true);
+        user.setCode("USER_" + System.currentTimeMillis());
 
-        // 3. Set các thông tin bổ sung
-        user.setPassword(passwordEncoder.encode("123456"));
+        User savedUser = userRepository.save(user);
 
-        // Nếu req không có fullName, bạn có thể set mặc định
-        if (user.getFullName() == null) {
-            user.setFullName(req.getEmail());
-        }
+        UserCreateResponse response = new UserCreateResponse();
+        response.setId(savedUser.getId());
+        response.setEmail(savedUser.getEmail());
+        return response;
 
-        // 4. Lưu và trả về
-        return userMapper.toCreateResponse(userRepository.save(user));
     }
 }

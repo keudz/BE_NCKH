@@ -22,19 +22,6 @@ public interface UserMapper {
     @Mapping(target = "role", ignore = true)
     User toEntity(UserRegistrationRequest request);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "role", ignore = true)
-    @Mapping(target = "password", ignore = true)
-    @Mapping(target = "email", source = "req.email")
-    @Mapping(target = "username", source = "req.email")
-    @Mapping(target = "tenant", source = "tenant") // Map nguyên object tenant vào user.tenant
-    @Mapping(target = "status", ignore = true)     // Để Service tự set hoặc dùng @Builder.Default
-    @Mapping(target = "phone", ignore = true)      // Tránh lấy phone của tenant gán cho user
-    @Mapping(target = "isVerified", ignore = true)
-    @Mapping(target = "verificationToken", ignore = true)
-    @Mapping(target = "verificationTokenExpiry", ignore = true)
-    User toEntity(UserCreateRequest req, Tenant tenant);
-
     UserCreateResponse toCreateResponse(User user);
 
     @Mapping(target = "tenantId", source = "tenant.id")
