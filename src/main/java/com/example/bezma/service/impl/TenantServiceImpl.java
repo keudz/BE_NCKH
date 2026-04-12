@@ -106,7 +106,7 @@ public class TenantServiceImpl implements ITenantService {
         tenant.setPlanType(request.getPlanType());
         tenant.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
         tenant.setStatusConfirm(RegistrationStatus.PENDING_VERIFICATION);
-        tenant.setActive(false);
+        tenant.setActive(true);
         tenant.setSlug(generatedSlug);
         tenant = tenantRepository.save(tenant);
 

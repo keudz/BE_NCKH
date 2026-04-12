@@ -32,8 +32,7 @@ public class SecurityConfig {
 //    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http,
-                                           JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -46,7 +45,8 @@ public class SecurityConfig {
                                 "/api/auth/login/basic", // Đăng nhập
                                 "/api/auth/logout",
                                 "/api/auth/login/zalo",
-                                "/api/v1/tenants/public/verify"
+                                "/api/v1/tenants/public/verify",
+                                "/api/v1/tenants/**"
                         ).permitAll()
 
                         // 2. Swagger UI + OpenAPI docs - phải public hoàn toàn

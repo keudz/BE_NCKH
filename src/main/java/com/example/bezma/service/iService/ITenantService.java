@@ -20,8 +20,8 @@ public interface ITenantService {
 
     // --- NHÓM 2: REGISTRATION & ONBOARDING (Luồng xác thực) ---
 
-    // Khách đăng ký Tenant mới
-    TenantDetailResponse registerTenant(TenantRegistrationRequest request);
+        // Khách đăng ký Tenant mới
+        TenantDetailResponse registerTenant(TenantRegistrationRequest request);
 
     // Xác thực Tenant qua Email Token
     boolean verifyTenant(String token);
