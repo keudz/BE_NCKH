@@ -16,5 +16,6 @@ public class TenantRegistrationRequest {
     @NotBlank(message = "Số điện thoại không được để trống")
     private String phone;
     private String logo;
+    private String description;
     private PlanType planType;
 }

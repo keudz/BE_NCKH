@@ -46,7 +46,8 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/api/auth/login/zalo",
                                 "/api/v1/tenants/public/verify",
-                                "/api/v1/tenants/**"
+                                "/api/v1/tenants/**",
+                                "/api/v1/agent/**"
                         ).permitAll()
 
                         // 2. Swagger UI + OpenAPI docs - phải public hoàn toàn

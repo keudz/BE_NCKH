@@ -1,4 +1,5 @@
 package com.example.bezma.service.impl;
+
 import com.example.bezma.common.enumCom.ErrorCode;
 import com.example.bezma.dto.req.user.UserUpdateRequest;
 import com.example.bezma.entity.user.UserStatus;
@@ -42,6 +43,7 @@ public class UserServiceImpl implements IUserService {
                 .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
                 .build();
     }
+
     @Override
     public List<UserSummaryResponse> getAllUsersInMyTenant(Boolean isDeleted) {
 
@@ -68,21 +70,22 @@ public class UserServiceImpl implements IUserService {
                 .isDeleted(user.getIsDeleted())
                 .roleName(user.getRole() != null ? user.getRole().getName() : null)
                 .tenantId(myTenantId)
-                .build()
-        ).toList();
+                .build()).toList();
     }
 
     @Override
     @Transactional
     public UserSummaryResponse updateUser(Long pathId, UserUpdateRequest request) {
 
-        // 1. Xác định ID người cần sửa (Lấy từ URL, nếu URL null thì lấy từ trong Body DTO)
+        // 1. Xác định ID người cần sửa (Lấy từ URL, nếu URL null thì lấy từ trong Body
+        // DTO)
         Long targetUserId = (pathId != null) ? pathId : request.getId();
         if (targetUserId == null) {
             throw new AppException(ErrorCode.INVALID_MESSAGE); // Báo lỗi nếu thiếu ID
         }
 
-        // 2. Lấy thông tin Admin đang gọi API (Dùng số điện thoại vì bạn đã đổi sang SĐT)
+        // 2. Lấy thông tin Admin đang gọi API (Dùng số điện thoại vì bạn đã đổi sang
+        // SĐT)
         String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
         User admin = userRepository.findByPhone(currentIdentifier)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -152,12 +155,12 @@ public class UserServiceImpl implements IUserService {
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        //  CHỐT 1 (MULTI-TENANT): Khác công ty thì báo lỗi 403
+        // CHỐT 1 (MULTI-TENANT): Khác công ty thì báo lỗi 403
         if (!admin.getTenant().getId().equals(targetUser.getTenant().getId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        //  CHỐT 2: Admin không được tự tay bóp dái (xóa chính mình)
+        // CHỐT 2: Admin không được tự tay bóp dái (xóa chính mình)
         if (admin.getId().equals(targetUser.getId())) {
             throw new AppException(ErrorCode.INVALID_MESSAGE);
         }
@@ -192,6 +195,5 @@ public class UserServiceImpl implements IUserService {
 
         userRepository.save(targetUser);
     }
-
 
 }

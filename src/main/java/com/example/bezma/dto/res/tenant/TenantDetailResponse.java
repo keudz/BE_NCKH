@@ -13,6 +13,7 @@ public class TenantDetailResponse {
     private String domain;
     private String email;
     private String logo;
+    private String description;
     private boolean active;
     private String planType;
     private String statusConfirm;

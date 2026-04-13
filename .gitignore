@@ -48,7 +48,8 @@ temp_images/
 logs/
 temp/
 tmp/
-.DS_Store
-
-
-
+.DS_Store### Docker ###
+Dockerfile
+docker-compose.yml
+ai_agent_service/Dockerfile
+ai_service/Dockerfile

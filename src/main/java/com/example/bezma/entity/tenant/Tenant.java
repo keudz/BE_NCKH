@@ -70,6 +70,9 @@ public class Tenant extends BaseEntity {
     @Builder.Default
     private RegistrationStatus statusConfirm = RegistrationStatus.PENDING_VERIFICATION;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     // --- Relationships ---
     @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL)
     private List<User> users;
