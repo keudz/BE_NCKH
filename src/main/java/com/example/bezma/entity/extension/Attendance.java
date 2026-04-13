@@ -1,62 +1,49 @@
 package com.example.bezma.entity.extension;
 
 import com.example.bezma.common.base.BaseEntity;
-import com.example.bezma.entity.tenant.Tenant;
 import com.example.bezma.entity.user.User;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "attendances", indexes = {
-        @Index(name = "idx_attendance_date", columnList = "attendance_date"),
-        @Index(name = "idx_attendance_user_tenant", columnList = "user_id, tenant_id")
-})
+@Table(name = "attendances")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Attendance extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
     private Long id;
-
-    @Column(name = "attendance_date", nullable = false)
-    private LocalDate attendanceDate;
-
-    @Column(name = "check_in")
-    private LocalDateTime checkIn;
-
-    @Column(name = "check_out")
-    private LocalDateTime checkOut;
-
-    @Column(name = "note")
-    private String note;
-
-//    @Column(name = "ip_address", length = 45)
-//    private String ipAddress;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 20)
-    @Builder.Default
-    private AttendanceStatus status = AttendanceStatus.PRESENT;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", nullable = false)
-    private Tenant tenant;
+    @Column(name = "check_time")
+    private LocalDateTime checkTime;
 
-    public enum AttendanceStatus {
-        PRESENT, LATE, ABSENT, LEAVE
-    }
+    // Tọa độ GPS (Vĩ độ - Kinh độ)
+    @Column(precision = 10, scale = 7)
+    private BigDecimal latitude;
+
+    @Column(precision = 10, scale = 7)
+    private BigDecimal longitude;
+
+    // Ảnh bằng chứng (chụp lúc chấm công) - lưu URL cloud hoặc local
+    @Column(name = "photo_url")
+    private String photoUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private AttendanceStatus status;
+
+    // Ghi chú nếu cần (ví dụ: "Muộn do kẹt xe")
+    @Column(columnDefinition = "TEXT")
+    private String note;
 }
+
