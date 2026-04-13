@@ -1,6 +1,7 @@
 package com.example.bezma.controller;
 
 import com.example.bezma.common.res.ApiResponse;
+import com.example.bezma.dto.req.admin.AssignRoleRequest;
 import com.example.bezma.dto.req.user.UserCreateRequest;
 import com.example.bezma.dto.res.user.UserCreateResponse;
 import com.example.bezma.service.iService.IAdminService;
@@ -28,5 +29,20 @@ public class AdminController {
                 .message("Tạo người dùng thành công!")
                 .build();
     }
+
+    @Operation(summary = "Gán quyền nhân viên cho người dùng Zalo (Customer -> Employee)")
+    @PutMapping("tenants/{tenantId}/assign-role")
+    public ApiResponse<Void> assignRole(
+            @PathVariable("tenantId") Long tenantId,
+            @RequestBody AssignRoleRequest req) {
+
+        adminService.assignRole(tenantId, req);
+
+        return ApiResponse.<Void>builder()
+                .message("Nâng cấp quyền thành công!")
+                .build();
+    }
+
+
 
 }

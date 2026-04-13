@@ -24,7 +24,8 @@ public enum ErrorCode {
 
     // --- 4. Nhóm Doanh Nghiệp (Tenant Errors) ---
     TENANT_NOT_FOUND(4041, "Không tìm thấy doanh nghiệp yêu cầu", HttpStatus.NOT_FOUND),
-    SLUG_ALREADY_EXISTS(4001, "Đường dẫn (Slug) này đã được sử dụng", HttpStatus.CONFLICT), // 409 Conflict chuẩn hơn 400
+    SLUG_ALREADY_EXISTS(4001, "Đường dẫn (Slug) này đã được sử dụng", HttpStatus.CONFLICT), // 409 Conflict chuẩn hơn
+                                                                                            // 400
     TENANT_NOT_VERIFIED(4002, "Đoàn lân này chưa hoàn tất xác thực", HttpStatus.FORBIDDEN),
     REGISTRATION_TIMEOUT(1011, "Hết thời gian kích hoạt, dữ liệu đăng ký đã bị xóa", HttpStatus.GONE), // 410 Gone
 
@@ -34,11 +35,14 @@ public enum ErrorCode {
     EMAIL_ALREADY_EXISTS(1006, "Email đã được đăng ký trước đó", HttpStatus.CONFLICT),
     ROLE_NOT_FOUND(1009, "Vai trò (Role) không tồn tại trên hệ thống", HttpStatus.NOT_FOUND),
     USER_NOT_ACTIVE(1013, "Tài khoản hiện đang bị khóa", HttpStatus.FORBIDDEN),
+    USER_NOT_EXISTED(1014, "Người dùng không tồn tại trong hệ thống", HttpStatus.NOT_FOUND),
+    USER_ALREADY_EMPLOYEE(1015, "Người dùng này đã là nhân viên", HttpStatus.BAD_REQUEST),
     INVALID_INPUT(1014, "Username hoặc password không hợp lệ", HttpStatus.BAD_REQUEST),
 
     // --- 6. Nhóm AI & Attendance Errors ---
     FACE_NOT_DETECTED(6001, "Không tìm thấy khuôn mặt trong ảnh. Vui lòng chụp rõ mặt.", HttpStatus.BAD_REQUEST),
     AI_SERVICE_ERROR(6002, "Lỗi kết nối hoặc xử lý từ hệ thống AI", HttpStatus.INTERNAL_SERVER_ERROR);
+
     private final int code;
     private final String message;
     private final HttpStatus statusCode;
@@ -49,4 +53,3 @@ public enum ErrorCode {
         this.statusCode = statusCode;
     }
 }
-
