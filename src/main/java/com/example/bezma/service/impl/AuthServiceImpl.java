@@ -45,7 +45,7 @@ public class AuthServiceImpl implements IAuthService {
             User user = (User) authentication.getPrincipal();
 
              if (Boolean.FALSE.equals(user.getIsActive())) {
-             throw new AppException(ErrorCode.USER_NOT_ACTIVE); // Dùng ErrorCode chuẩn
+             throw new AppException(ErrorCode.USER_NOT_ACTIVE);
              }
 
             String accessToken = jwtTokenProvider.generateAccessToken(user);
@@ -68,12 +68,10 @@ public class AuthServiceImpl implements IAuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         String requestRefreshToken = request.getRefreshToken();
 
-        // 1. Kiểm tra Refresh Token có hợp lệ và chưa hết hạn không
         if (!jwtTokenProvider.validateToken(requestRefreshToken)) {
             throw new RuntimeException("Refresh Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại!");
         }
 
-        // 2. Lấy username từ token
         String username = jwtTokenProvider.getUsernameFromToken(requestRefreshToken);
 
         User user = userRepository.findByUsername(username)
@@ -83,7 +81,6 @@ public class AuthServiceImpl implements IAuthService {
             throw new RuntimeException("Tài khoản đã bị vô hiệu hóa!");
         }
 
-        // 4. Tạo bộ Token mới toanh
         String newAccessToken = jwtTokenProvider.generateAccessToken(user);
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(user);
 
@@ -151,5 +148,4 @@ public class AuthServiceImpl implements IAuthService {
                 .tenantId(user.getTenant().getId())
                 .build();
     }
-
 }

@@ -27,7 +27,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Locale;
@@ -124,9 +123,9 @@ public class TenantServiceImpl implements ITenantService {
                 .build();
         userRepository.save(admin);
 
-        // 5. Lưu Password tạm vào Redis với TTL 24 giờ
+        // 5. Lưu Password tạm vào Redis với TTL 5 phút (300 giây)
         String redisKey = "registration_checkpoint:" + tenant.getId();
-        redisTemplate.opsForValue().set(redisKey, defaultPass, 24, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(redisKey, defaultPass, 5, TimeUnit.MINUTES);
 
         // 6. Gửi mail
         emailService.sendVerificationEmail(tenant.getEmail(), token);
@@ -249,6 +248,7 @@ public class TenantServiceImpl implements ITenantService {
         tenant.setStatusConfirm(RegistrationStatus.VERIFIED);
         return tenantMapper.toDetailResponse(tenantRepository.save(tenant));
     }
+
 
     // Helper method để tái sử dụng và bắt lỗi Redis
     private void saveToCache(String key, Object data, int minutes) {

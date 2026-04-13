@@ -18,7 +18,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 
-
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -46,12 +45,9 @@ public class AuthController {
                 .build();
     }
 
-
-
     @Operation(summary = "Đăng xuất tài khoản (Xóa Cookie)")
     @PostMapping("/logout")
     public ApiResponse<Void> logout(HttpServletResponse response) {
-
 
         ResponseCookie deleteCookie = ResponseCookie.from("access_token", "")
                 .httpOnly(true)
@@ -74,7 +70,6 @@ public class AuthController {
             @RequestBody @Valid ZaloLoginRequest request,
             HttpServletResponse response) {
         AuthResponse data = authService.loginZalo(request);
-
 
         ResponseCookie cookie = ResponseCookie.from("access_token", data.getAccessToken())
                 .httpOnly(true)

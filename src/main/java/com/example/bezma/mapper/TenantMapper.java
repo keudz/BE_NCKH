@@ -35,7 +35,7 @@ public interface TenantMapper {
 
     TenantSummaryResponse toSummaryResponse(Tenant tenant);
 
-    @Mapping(target = "createdAt", source = "createdAt", dateFormat = "dd-MM-yyyy HH:mm:ss")
+    @Mapping(target = "createdAt", source = "createdAt")
     TenantDetailResponse toDetailResponse(Tenant tenant);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)

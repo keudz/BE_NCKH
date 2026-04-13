@@ -7,8 +7,12 @@ import java.util.List;
 
 public interface IUserService {
     UserSummaryResponse getMyProfile();
+
     List<UserSummaryResponse> getAllUsersInMyTenant(Boolean isDeleted);
+
     UserSummaryResponse updateUser(Long pathId, UserUpdateRequest request);
+
     void deleteUser(Long targetUserId);
+
     void restoreUser(Long targetUserId);
 }

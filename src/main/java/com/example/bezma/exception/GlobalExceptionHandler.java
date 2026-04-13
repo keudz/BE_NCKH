@@ -55,7 +55,9 @@ public class GlobalExceptionHandler {
 
     // 4. Bắt các lỗi không xác định (Tránh văng trace code ra ngoài)
     @ExceptionHandler(value = Exception.class)
-    public ResponseEntity<ApiResponse<?>> handleRuntimeException(RuntimeException exception) {
+    // public ResponseEntity<ApiResponse<?>> handleRuntimeException(RuntimeException
+    // exception)
+    public ResponseEntity<ApiResponse<?>> handleRuntimeException(Exception exception) {
         ApiResponse<?> apiResponse = ApiResponse.builder()
                 .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
                 .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage())
