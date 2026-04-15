@@ -24,6 +24,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.bezma.dto.res.user.UserSummaryResponse;
+
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements IAuthService {
@@ -36,6 +38,22 @@ public class AuthServiceImpl implements IAuthService {
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private UserSummaryResponse mapToUserSummaryResponse(User user) {
+        return UserSummaryResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .avatar(user.getAvatar())
+                .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
+                .tenantCode(user.getTenant() != null ? user.getTenant().getTenantCode() : null)
+                .roleName(user.getRole() != null ? user.getRole().getName() : null)
+                .isActive(user.getIsActive())
+                .isDeleted(user.getIsDeleted())
+                .build();
+    }
+
     @Override
     public AuthResponse login(LoginRequest request) {
         try {
@@ -44,9 +62,9 @@ public class AuthServiceImpl implements IAuthService {
 
             User user = (User) authentication.getPrincipal();
 
-             if (Boolean.FALSE.equals(user.getIsActive())) {
-             throw new AppException(ErrorCode.USER_NOT_ACTIVE);
-             }
+            if (Boolean.FALSE.equals(user.getIsActive())) {
+                throw new AppException(ErrorCode.USER_NOT_ACTIVE);
+            }
 
             String accessToken = jwtTokenProvider.generateAccessToken(user);
             String refreshToken = jwtTokenProvider.generateRefreshToken(user);
@@ -54,9 +72,7 @@ public class AuthServiceImpl implements IAuthService {
             return AuthResponse.builder()
                     .accessToken(accessToken)
                     .refreshToken(refreshToken)
-                    .username(user.getUsername())
-                    .role(user.getRole().getName())
-                    .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
+                    .user(mapToUserSummaryResponse(user))
                     .build();
 
         } catch (BadCredentialsException e) {
@@ -87,16 +103,13 @@ public class AuthServiceImpl implements IAuthService {
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
-                .username(user.getUsername())
-                .role(user.getRole().getName())
-                .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
+                .user(mapToUserSummaryResponse(user))
                 .build();
     }
 
     @Override
     @Transactional
     public AuthResponse loginZalo(ZaloLoginRequest request) {
-
         String zaloId;
         try {
             zaloId = zaloService.getZaloIdFromToken(request.getZaloToken());
@@ -107,7 +120,6 @@ public class AuthServiceImpl implements IAuthService {
         User user = userRepository.findByZaloId(zaloId).orElse(null);
 
         if (user == null) {
-
             Tenant tenant = tenantRepository.findById(request.getTenantId())
                     .orElseThrow(() -> new AppException(ErrorCode.TENANT_NOT_FOUND));
 
@@ -126,9 +138,8 @@ public class AuthServiceImpl implements IAuthService {
                     .status(UserStatus.ACTIVE)
                     .build();
 
-            userRepository.save(user);
+            user = userRepository.save(user); // Gán lại user sau khi save để có ID
         } else {
-
             if (Boolean.FALSE.equals(user.getIsActive())) {
                 throw new AppException(ErrorCode.USER_NOT_ACTIVE);
             }
@@ -137,15 +148,14 @@ public class AuthServiceImpl implements IAuthService {
                 throw new AppException(ErrorCode.UNAUTHORIZED);
             }
         }
+        
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .username(user.getUsername())
-                .role(user.getRole().getName())
-                .tenantId(user.getTenant().getId())
+                .user(mapToUserSummaryResponse(user))
                 .build();
     }
 }

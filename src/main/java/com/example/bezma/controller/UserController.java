@@ -1,6 +1,7 @@
 package com.example.bezma.controller;
 
 import com.example.bezma.common.res.ApiResponse;
+import com.example.bezma.dto.req.user.UserCreateRequest;
 import com.example.bezma.dto.req.user.UserUpdateRequest;
 import com.example.bezma.dto.res.user.UserSummaryResponse;
 import com.example.bezma.service.iService.IUserService;
@@ -19,6 +20,16 @@ import java.util.List;
 public class UserController {
 
     private final IUserService userService;
+
+    @Operation(summary = "Tạo nhân viên mới (Dành cho Admin)")
+    @PostMapping
+    @PreAuthorize("hasAnyAuthority('TENANT_ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<UserSummaryResponse> createUser(@RequestBody UserCreateRequest request) {
+        return ApiResponse.<UserSummaryResponse>builder()
+                .data(userService.createUser(request))
+                .message("Tạo nhân viên thành công!")
+                .build();
+    }
 
     @Operation(summary = "Lấy thông tin cá nhân của phiên đăng nhập hiện tại")
     @GetMapping("/profile")

@@ -28,6 +28,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 
@@ -118,8 +123,23 @@ public class AttendanceServiceImpl implements IAttendanceService {
                 .build();
 
         try {
-            String url = aiServiceUrl + "/verify-with-embedding";
+            // --- Logic Lưu Ảnh Bằng Chứng (Evidence Photo) ---
+            String uploadDir = "uploads/attendance/";
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
 
+            String fileName = "checkin_" + userId + "_" + System.currentTimeMillis() + ".jpg";
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(photo.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            
+            attendance.setPhotoUrl("/" + uploadDir + fileName); // Lưu đường dẫn tương đối
+            // ------------------------------------------------
+
+            String url = aiServiceUrl + "/verify-with-embedding";
+            
+            // ... (Phần gọi AI giữ nguyên)
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             body.add("image", new ByteArrayResource(photo.getBytes()) {
                 @Override
@@ -143,7 +163,20 @@ public class AttendanceServiceImpl implements IAttendanceService {
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Boolean verified = (Boolean) response.getBody().get("verified");
                 if (Boolean.TRUE.equals(verified)) {
-                    attendance.setStatus(AttendanceStatus.SUCCESS);
+                    // --- Logic phân loại Đúng giờ / Muộn ---
+                    LocalTime now = attendance.getCheckTime().toLocalTime();
+                    LocalTime startTime = user.getTenant().getWorkingStartTime();
+                    
+                    if (startTime == null) {
+                        startTime = LocalTime.of(8, 0); // Dự phòng nếu DB chưa có giá trị
+                    }
+
+                    if (now.isAfter(startTime)) {
+                        attendance.setStatus(AttendanceStatus.LATE);
+                        attendance.setNote("Đi muộn (Vào lúc " + now + ")");
+                    } else {
+                        attendance.setStatus(AttendanceStatus.ON_TIME);
+                    }
                 } else {
                     attendance.setStatus(AttendanceStatus.FAIL_FACE);
                 }
@@ -153,9 +186,9 @@ public class AttendanceServiceImpl implements IAttendanceService {
             attendance.setStatus(AttendanceStatus.FAIL_FACE);
             attendance.setNote(ErrorCode.FACE_NOT_DETECTED.getMessage());
         } catch (Exception e) {
-            log.error("AI Verification Error: {}", e.getMessage());
+            log.error("Lỗi xử lý điểm danh: {}", e.getMessage());
             attendance.setStatus(AttendanceStatus.FAIL_FACE);
-            attendance.setNote("Lỗi hệ thống nhận diện: " + e.getMessage());
+            attendance.setNote("Lỗi hệ thống: " + e.getMessage());
         }
 
         return attendanceRepository.save(attendance);

@@ -1,15 +1,20 @@
 package com.example.bezma.service.impl;
 
 import com.example.bezma.common.enumCom.ErrorCode;
+import com.example.bezma.dto.req.user.UserCreateRequest;
 import com.example.bezma.dto.req.user.UserUpdateRequest;
+import com.example.bezma.entity.auth.Role;
 import com.example.bezma.entity.user.UserStatus;
 import com.example.bezma.exception.AppException;
 import com.example.bezma.dto.res.user.UserSummaryResponse;
 import com.example.bezma.entity.user.User;
+import com.example.bezma.repository.RoleRepository;
+import com.example.bezma.repository.TenantRepository;
 import com.example.bezma.repository.UserRepository;
 import com.example.bezma.service.iService.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +25,59 @@ import java.util.List;
 public class UserServiceImpl implements IUserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    @Transactional
+    public UserSummaryResponse createUser(UserCreateRequest request) {
+        // 1. Lấy thông tin Admin đang gọi API
+        String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
+        User admin = userRepository.findByPhone(currentIdentifier)
+                .orElse(userRepository.findByUsername(currentIdentifier).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
+
+        // 2. Kiểm tra trùng lặp
+        if (userRepository.findByPhone(request.getPhone()).isPresent()) {
+            throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
+        }
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+
+        // 3. Lấy Role (Ưu tiên STAFF mặc định nếu không chọn)
+        String roleName = (request.getRoles() != null && !request.getRoles().isEmpty()) 
+                        ? request.getRoles().get(0) : "STAFF";
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+
+        // 4. Tạo User mới gán vào cùng Tenant của Admin
+        User newUser = User.builder()
+                .username(request.getPhone())
+                .phone(request.getPhone())
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(role)
+                .tenant(admin.getTenant())
+                .isActive(true)
+                .status(UserStatus.ACTIVE)
+                .build();
+        
+        newUser.setIsDeleted(false);
+
+        userRepository.save(newUser);
+
+        return UserSummaryResponse.builder()
+                .id(newUser.getId())
+                .username(newUser.getUsername())
+                .fullName(newUser.getFullName())
+                .email(newUser.getEmail())
+                .phone(newUser.getPhone())
+                .isActive(newUser.getIsActive())
+                .roleName(role.getName())
+                .tenantId(admin.getTenant().getId())
+                .build();
+    }
 
     @Override
     public UserSummaryResponse getMyProfile() {

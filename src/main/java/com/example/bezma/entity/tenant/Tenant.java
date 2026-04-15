@@ -7,6 +7,7 @@ import com.example.bezma.common.base.BaseEntity;
 import com.example.bezma.entity.user.User;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Entity
@@ -72,6 +73,10 @@ public class Tenant extends BaseEntity {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    @Column(name = "working_start_time")
+    @Builder.Default
+    private LocalTime workingStartTime = LocalTime.of(8, 30); // Giờ mặc định là 8:30 sáng
 
     // --- Relationships ---
     @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL)
