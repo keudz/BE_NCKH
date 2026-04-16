@@ -79,6 +79,6 @@ public class Tenant extends BaseEntity {
     private LocalTime workingStartTime = LocalTime.of(8, 30); // Giờ mặc định là 8:30 sáng
 
     // --- Relationships ---
-    @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<User> users;
 }

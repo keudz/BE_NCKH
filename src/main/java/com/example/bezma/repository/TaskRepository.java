@@ -11,4 +11,11 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByAssigneeId(Long assigneeId);
     List<Task> findByTenantId(Long tenantId);
     List<Task> findByTenantIdAndStatus(Long tenantId, TaskStatus status);
+    // --- Dùng cho Admin ---
+    long countByTenantId(Long tenantId);
+    long countByTenantIdAndStatus(Long tenantId, TaskStatus status);
+
+    // --- Dùng cho Nhân viên ---
+    long countByAssigneeId(Long assigneeId);
+    long countByAssigneeIdAndStatus(Long assigneeId, TaskStatus status);
 }

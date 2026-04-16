@@ -1,5 +1,6 @@
 package com.example.bezma.entity.task;
 
+import com.example.bezma.entity.project.Project;
 import com.example.bezma.entity.tenant.Tenant;
 import com.example.bezma.entity.user.User;
 import jakarta.persistence.*;
@@ -40,6 +41,11 @@ public class Task {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
+
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id",nullable = false)
+    private Project project;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
