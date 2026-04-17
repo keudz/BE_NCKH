@@ -17,4 +17,5 @@ public class UserSummaryResponse {
     private Boolean isDeleted;
     private String roleName;
     private String avatar;
+    private Boolean isFaceRegistered;
 }

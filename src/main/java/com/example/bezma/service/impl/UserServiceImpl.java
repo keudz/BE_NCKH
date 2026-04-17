@@ -27,14 +27,21 @@ public class UserServiceImpl implements IUserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TenantRepository tenantRepository;
+
+    private User getCurrentUser() {
+        String identifier = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByPhone(identifier)
+                .or(() -> userRepository.findByUsername(identifier))
+                .or(() -> userRepository.findByEmail(identifier))
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
 
     @Override
     @Transactional
     public UserSummaryResponse createUser(UserCreateRequest request) {
         // 1. Lấy thông tin Admin đang gọi API
-        String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
-        User admin = userRepository.findByPhone(currentIdentifier)
-                .orElse(userRepository.findByUsername(currentIdentifier).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
+        User admin = getCurrentUser();
 
         // 2. Kiểm tra trùng lặp
         if (userRepository.findByPhone(request.getPhone()).isPresent()) {
@@ -45,8 +52,9 @@ public class UserServiceImpl implements IUserService {
         }
 
         // 3. Lấy Role (Ưu tiên STAFF mặc định nếu không chọn)
-        String roleName = (request.getRoles() != null && !request.getRoles().isEmpty()) 
-                        ? request.getRoles().get(0) : "STAFF";
+        String roleName = (request.getRoles() != null && !request.getRoles().isEmpty())
+                ? request.getRoles().get(0)
+                : "STAFF";
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
 
@@ -62,7 +70,7 @@ public class UserServiceImpl implements IUserService {
                 .isActive(true)
                 .status(UserStatus.ACTIVE)
                 .build();
-        
+
         newUser.setIsDeleted(false);
 
         userRepository.save(newUser);
@@ -105,11 +113,8 @@ public class UserServiceImpl implements IUserService {
     @Override
     public List<UserSummaryResponse> getAllUsersInMyTenant(Boolean isDeleted) {
 
-        // 1. Xem ai đang gọi API này (Lấy SĐT hoặc Username từ Token)
-        String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        User currentUser = userRepository.findByPhone(currentIdentifier)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        // 1. Xem ai đang gọi API này
+        User currentUser = getCurrentUser();
 
         Long myTenantId = currentUser.getTenant().getId();
 
@@ -142,11 +147,8 @@ public class UserServiceImpl implements IUserService {
             throw new AppException(ErrorCode.INVALID_MESSAGE); // Báo lỗi nếu thiếu ID
         }
 
-        // 2. Lấy thông tin Admin đang gọi API (Dùng số điện thoại vì bạn đã đổi sang
-        // SĐT)
-        String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
-        User admin = userRepository.findByPhone(currentIdentifier)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        // 2. Lấy thông tin Admin đang gọi API
+        User admin = getCurrentUser();
 
         // 3. Lấy thông tin Nhân viên đang bị sửa
         User targetUser = userRepository.findById(targetUserId)
@@ -205,9 +207,7 @@ public class UserServiceImpl implements IUserService {
     public void deleteUser(Long targetUserId) {
 
         // 1. Lấy thông tin Admin đang gọi API
-        String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
-        User admin = userRepository.findByPhone(currentIdentifier)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User admin = getCurrentUser();
 
         // 2. Lấy thông tin Nhân viên sắp bị bế đi
         User targetUser = userRepository.findById(targetUserId)
@@ -235,9 +235,7 @@ public class UserServiceImpl implements IUserService {
     @Override
     @Transactional
     public void restoreUser(Long targetUserId) {
-        String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
-        User admin = userRepository.findByPhone(currentIdentifier)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User admin = getCurrentUser();
 
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));

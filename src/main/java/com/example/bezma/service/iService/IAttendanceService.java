@@ -7,6 +7,6 @@ import java.util.List;
 
 public interface IAttendanceService {
     Attendance checkIn(Long userId, MultipartFile photo, BigDecimal lat, BigDecimal lon);
-    void registerFace(Long userId, MultipartFile photo);
+    void registerFace(Long userId, MultipartFile[] photos);
     List<Attendance> getMyAttendance(Long userId);
 }

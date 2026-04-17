@@ -39,7 +39,34 @@ class FaceService:
             )
             return embeddings[0]["embedding"]
         except Exception as e:
-            raise Exception(f"Lỗi trích xuất đặc trưng: {str(e)}")
+            raise Exception(f"Lỗi trích xuất đặc trưng tại {img_path}: {str(e)}")
+
+    WEIGHTS = [0.4, 0.15, 0.15, 0.15, 0.15]  # Thẳng, Trái, Phải, Trên, Dưới
+
+    @staticmethod
+    def extract_multiple_embeddings(img_paths: list):
+        embeddings = []
+        for path in img_paths:
+            try:
+                embedding = FaceService.extract_embedding(path)
+                embeddings.append(embedding)
+            except Exception as e:
+                # Nếu một hướng bị lỗi, chúng ta không thể tính trọng số chuẩn.
+                # Tuy nhiên để linh hoạt, ta sẽ ném lỗi yêu cầu chụp lại.
+                raise Exception(f"Không thể trích xuất khuôn mặt từ một trong các hướng ({path}). Vui lòng chụp lại rõ ràng.")
+        
+        if len(embeddings) != 5:
+            # Nếu số lượng không phải 5, ta tính trung bình cộng bình thường (fallback)
+            avg_embedding = np.mean(embeddings, axis=0).tolist()
+        else:
+            # Tính trung bình có trọng số theo 5 hướng
+            weighted_embeddings = []
+            for i in range(5):
+                weighted_embeddings.append(np.array(embeddings[i]) * FaceService.WEIGHTS[i])
+            
+            avg_embedding = np.sum(weighted_embeddings, axis=0).tolist()
+            
+        return avg_embedding
 
     @staticmethod
     def verify_with_stored_embedding(new_img_path: str, stored_embedding_json: str):

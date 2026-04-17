@@ -36,16 +36,16 @@ public class AdminServiceImpl implements IAdminService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new RuntimeException("Tenant không tồn tại"));
 
-        // Gán Role mặc định là EMPLOYEE (Nhân viên) cho user mới tạo bởi Admin
-        Role employeeRole = roleRepository.findByName("EMPLOYEE")
-                .orElseThrow(() -> new RuntimeException("Role EMPLOYEE không tồn tại"));
+        // Gán Role mặc định là STAFF (Nhân viên) cho user mới tạo bởi Admin
+        Role staffRole = roleRepository.findByName("STAFF")
+                .orElseThrow(() -> new RuntimeException("Role STAFF không tồn tại"));
 
         User user = new User();
         user.setEmail(req.getEmail());
         user.setUsername(req.getEmail());
         user.setPassword(passwordEncoder.encode("123456")); // password nullable = false
         user.setTenant(tenant);
-        user.setRole(employeeRole);
+        user.setRole(staffRole);
         user.setStatus(UserStatus.PENDING_ACTIVE);
         user.setIsActive(true);
         user.setCode("USER_" + System.currentTimeMillis());

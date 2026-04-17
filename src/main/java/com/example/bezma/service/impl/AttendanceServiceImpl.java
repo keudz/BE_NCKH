@@ -51,21 +51,32 @@ public class AttendanceServiceImpl implements IAttendanceService {
 
     @Override
     @Transactional
-    public void registerFace(Long userId, MultipartFile photo) {
+    public void registerFace(Long userId, MultipartFile[] photos) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+        // 0. Kiểm tra xem người dùng đã đăng ký chưa
+        if (Boolean.TRUE.equals(user.getIsFaceRegistered())) {
+            throw new AppException(ErrorCode.FACE_ALREADY_REGISTERED);
+        }
+
+        if (photos == null || photos.length == 0) {
+            throw new AppException(ErrorCode.INVALID_INPUT);
+        }
+
         try {
-            // 1. Gửi ảnh sang AI Service để lấy Embedding
-            String url = aiServiceUrl + "/extract-embedding";
+            // 1. Gửi danh sách ảnh sang AI Service để lấy Embedding trung bình
+            String url = aiServiceUrl + "/extract-embeddings";
 
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("image", new ByteArrayResource(photo.getBytes()) {
-                @Override
-                public String getFilename() {
-                    return photo.getOriginalFilename();
-                }
-            });
+            for (MultipartFile photo : photos) {
+                body.add("files", new ByteArrayResource(photo.getBytes()) {
+                    @Override
+                    public String getFilename() {
+                        return photo.getOriginalFilename();
+                    }
+                });
+            }
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);
@@ -90,13 +101,13 @@ public class AttendanceServiceImpl implements IAttendanceService {
                 user.setIsFaceRegistered(true);
                 userRepository.save(user);
 
-                log.info("Face registered successfully for user: {}", userId);
+                log.info("Face registered successfully with multiple photos for user: {}", userId);
             }
         } catch (IOException e) {
             log.error("Lỗi đọc file ảnh: {}", e.getMessage());
             throw new AppException(ErrorCode.INVALID_INPUT);
         } catch (HttpClientErrorException.BadRequest e) {
-            log.error("AI Service - Không thấy mặt: {}", e.getMessage());
+            log.error("AI Service - Lỗi xử lý: {}", e.getMessage());
             throw new AppException(ErrorCode.FACE_NOT_DETECTED);
         } catch (Exception e) {
             log.error("AI Service Error: {}", e.getMessage());

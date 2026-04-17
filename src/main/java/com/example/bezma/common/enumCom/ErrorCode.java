@@ -41,7 +41,8 @@ public enum ErrorCode {
 
     // --- 6. Nhóm AI & Attendance Errors ---
     FACE_NOT_DETECTED(6001, "Không tìm thấy khuôn mặt trong ảnh. Vui lòng chụp rõ mặt.", HttpStatus.BAD_REQUEST),
-    AI_SERVICE_ERROR(6002, "Lỗi kết nối hoặc xử lý từ hệ thống AI", HttpStatus.INTERNAL_SERVER_ERROR);
+    AI_SERVICE_ERROR(6002, "Lỗi kết nối hoặc xử lý từ hệ thống AI", HttpStatus.INTERNAL_SERVER_ERROR),
+    FACE_ALREADY_REGISTERED(6003, "Khuôn mặt này đã được đăng ký trước đó. Không thể đăng ký lại.", HttpStatus.BAD_REQUEST);
 
     private final int code;
     private final String message;

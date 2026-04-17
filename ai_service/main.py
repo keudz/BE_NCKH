@@ -37,6 +37,22 @@ async def verify_with_embedding(
     finally:
         remove_temp_file(path)
 
+@app.post("/extract-embeddings")
+async def extract_multiple_embeddings(files: list[UploadFile] = File(...)):
+    paths = []
+    try:
+        for file in files:
+            path = save_temp_file(file)
+            paths.append(path)
+        
+        embedding = FaceService.extract_multiple_embeddings(paths)
+        return {"embedding": embedding}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        for path in paths:
+            remove_temp_file(path)
+
 @app.post("/extract-embedding")
 async def extract_embedding(image: UploadFile = File(...)):
     path = save_temp_file(image)

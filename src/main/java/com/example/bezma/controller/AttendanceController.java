@@ -28,9 +28,9 @@ public class AttendanceController {
     @PostMapping(value = "/register-face", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<Void> registerFace(
             @AuthenticationPrincipal User currentUser,
-            @RequestParam("photo") MultipartFile photo) {
+            @RequestParam("photos") MultipartFile[] photos) {
         
-        attendanceService.registerFace(currentUser.getId(), photo);
+        attendanceService.registerFace(currentUser.getId(), photos);
         
         return ApiResponse.<Void>builder()
                 .message("Đăng ký khuôn mặt thành công!")

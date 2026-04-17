@@ -23,7 +23,7 @@ public class UserController {
 
     @Operation(summary = "Tạo nhân viên mới (Dành cho Admin)")
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('TENANT_ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<UserSummaryResponse> createUser(@RequestBody UserCreateRequest request) {
         return ApiResponse.<UserSummaryResponse>builder()
                 .data(userService.createUser(request))
@@ -52,7 +52,7 @@ public class UserController {
 
     @Operation(summary = "Cập nhật thông tin nhân viên")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('TENANT_ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<UserSummaryResponse> updateUser(
             @PathVariable(value = "id", required = false) Long id,
             @RequestBody UserUpdateRequest request) {
@@ -65,7 +65,7 @@ public class UserController {
 
     @Operation(summary = "Xóa (ẩn) nhân viên khỏi hệ thống")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('TENANT_ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<Void> deleteUser(@PathVariable("id") Long targetUserId) {
 
         userService.deleteUser(targetUserId);
@@ -77,7 +77,7 @@ public class UserController {
 
     @Operation(summary = "Khôi phục nhân viên từ thùng rác")
     @PatchMapping("/{id}/restore")
-    @PreAuthorize("hasAnyAuthority('TENANT_ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<Void> restoreUser(@PathVariable("id") Long targetUserId) {
         userService.restoreUser(targetUserId);
         return ApiResponse.<Void>builder()
