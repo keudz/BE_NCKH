@@ -10,9 +10,15 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
+import org.hibernate.annotations.Filter;
 
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
+@FilterDef(name = "tenantFilter", parameters = {@ParamDef(name = "tenantId", type = Long.class)})
+@FilterDef(name = "deletedFilter", parameters = {@ParamDef(name = "isDeleted", type = Boolean.class)})
+@Filter(name = "deletedFilter", condition = "is_deleted = :isDeleted")
 @Getter
 @Setter
 public abstract class BaseEntity {

@@ -127,6 +127,7 @@ public class AttendanceServiceImpl implements IAttendanceService {
 
         Attendance attendance = Attendance.builder()
                 .user(user)
+                .tenant(user.getTenant())
                 .checkTime(LocalDateTime.now())
                 .latitude(lat)
                 .longitude(lon)
@@ -208,5 +209,15 @@ public class AttendanceServiceImpl implements IAttendanceService {
     @Override
     public List<Attendance> getMyAttendance(Long userId) {
         return attendanceRepository.findAllByUserIdOrderByCheckTimeDesc(userId);
+    }
+
+    @Override
+    public List<Attendance> getHistoryByMonth(Long userId, int month, int year) {
+        return attendanceRepository.getHistoryByUserAndMonth(userId, month, year);
+    }
+
+    @Override
+    public List<Attendance> getTenantHistoryByMonth(Long tenantId, int month, int year) {
+        return attendanceRepository.getTenantHistoryByMonth(tenantId, month, year);
     }
 }

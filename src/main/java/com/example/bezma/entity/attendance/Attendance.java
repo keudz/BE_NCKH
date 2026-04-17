@@ -2,14 +2,19 @@ package com.example.bezma.entity.attendance;
 
 import com.example.bezma.common.base.BaseEntity;
 import com.example.bezma.entity.user.User;
+import com.example.bezma.entity.tenant.Tenant;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "attendances")
+@Table(name = "attendances", indexes = {
+    @Index(name = "idx_attendance_tenant", columnList = "tenant_id")
+})
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 @Getter
 @Setter
 @Builder
@@ -24,6 +29,10 @@ public class Attendance extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
 
     @Column(name = "check_time")
     private LocalDateTime checkTime;

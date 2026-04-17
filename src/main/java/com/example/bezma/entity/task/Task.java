@@ -1,14 +1,19 @@
 package com.example.bezma.entity.task;
 
-import com.example.bezma.entity.project.Project;
+// import com.example.bezma.entity.project.Project;
 import com.example.bezma.entity.tenant.Tenant;
 import com.example.bezma.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.Filter;
+
 @Entity
-@Table(name = "tasks")
+@Table(name = "system_tasks", indexes = {
+    @Index(name = "idx_task_tenant", columnList = "tenant_id")
+})
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 @Getter
 @Setter
 @Builder
@@ -43,9 +48,9 @@ public class Task {
     private Tenant tenant;
 
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id",nullable = false)
-    private Project project;
+    // @ManyToOne(fetch = FetchType.LAZY)
+    // @JoinColumn(name = "project_id",nullable = false)
+    // private Project project;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

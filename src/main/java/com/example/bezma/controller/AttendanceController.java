@@ -66,4 +66,28 @@ public class AttendanceController {
                 .message("Lấy lịch sử điểm danh thành công!")
                 .build();
     }
+
+    @Operation(summary = "Lấy lịch sử điểm danh cá nhân theo tháng")
+    @GetMapping("/history")
+    public ApiResponse<List<Attendance>> getHistoryByMonth(
+            @AuthenticationPrincipal User currentUser,
+            @RequestParam("month") int month,
+            @RequestParam("year") int year) {
+        return ApiResponse.<List<Attendance>>builder()
+                .data(attendanceService.getHistoryByMonth(currentUser.getId(), month, year))
+                .message("Lấy lịch sử điểm danh tháng " + month + "/" + year + " thành công!")
+                .build();
+    }
+
+    @Operation(summary = "Lấy lịch sử điểm danh toàn bộ nhân viên theo tháng (Dành cho Admin)")
+    @GetMapping("/tenant-history")
+    public ApiResponse<List<Attendance>> getTenantHistoryByMonth(
+            @AuthenticationPrincipal User currentUser,
+            @RequestParam("month") int month,
+            @RequestParam("year") int year) {
+        return ApiResponse.<List<Attendance>>builder()
+                .data(attendanceService.getTenantHistoryByMonth(currentUser.getTenant().getId(), month, year))
+                .message("Lấy dữ liệu chấm công doanh nghiệp tháng " + month + "/" + year + " thành công!")
+                .build();
+    }
 }

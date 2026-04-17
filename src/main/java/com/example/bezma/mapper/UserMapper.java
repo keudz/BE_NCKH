@@ -1,15 +1,20 @@
 package com.example.bezma.mapper;
 
-//import com.example.bezma.dto.req.user.UserCreateRequest;
 import com.example.bezma.dto.req.user.UserRegistrationRequest;
 import com.example.bezma.dto.req.user.UserUpdateRequest;
 import com.example.bezma.dto.res.user.UserCreateResponse;
 import com.example.bezma.dto.res.user.UserDetailResponse;
 import com.example.bezma.dto.res.user.UserSummaryResponse;
-//import com.example.bezma.entity.auth.Role;
-//import com.example.bezma.entity.tenant.Tenant;
+import com.example.bezma.entity.auth.Role;
+import com.example.bezma.entity.tenant.Tenant;
 import com.example.bezma.entity.user.User;
-import org.mapstruct.*;
+import com.example.bezma.entity.user.UserStatus;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserMapper {

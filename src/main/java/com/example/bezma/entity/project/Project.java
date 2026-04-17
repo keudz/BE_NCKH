@@ -1,6 +1,7 @@
 package com.example.bezma.entity.project;
 
 import com.example.bezma.entity.tenant.Tenant;
+import com.example.bezma.entity.user.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,4 +35,7 @@ public class Project {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id")
+    private User manager;
 }
