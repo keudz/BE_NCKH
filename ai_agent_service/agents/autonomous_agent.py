@@ -48,13 +48,14 @@ Quy tắc:
                     results["report_url"] = url.split("tải về tại: ")[1] if "tải về tại: " in url else None
                     results["full_response"] += f"\n\n**[Hệ thống]** Đã xuất báo cáo thành công: [Tải về]({results['report_url']})"
 
-        # Xử lý cho Gemini (Auto Execution result parsing)
+        # Xử lý cho Gemini (Auto Execution result parsing) hoặc fallback cho text response
         elif "URL: " in results["full_response"]:
             import re
-            img_match = re.search(r"URL: (http\S+)", results["full_response"])
+            # Sửa regex để bắt cả các đường dẫn nội bộ (như /static/...)
+            img_match = re.search(r"URL: (\S+)", results["full_response"])
             if img_match: results["generated_image_url"] = img_match.group(1)
             
-            report_match = re.search(r"tải về tại: (http\S+)", results["full_response"])
+            report_match = re.search(r"tải về tại: (\S+)", results["full_response"])
             if report_match: results["report_url"] = report_match.group(1)
         
         return results
