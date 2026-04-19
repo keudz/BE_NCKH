@@ -64,4 +64,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
         Optional<User> findByIdAndTenantId(Long id, Long tenantId);
         long countByTenantId(Long tenantId);
 
+        @Query("SELECT COUNT(u) FROM User u WHERE u.branch.id = :branchId")
+        long countByBranchId(@Param("branchId") Long branchId);
+
 }

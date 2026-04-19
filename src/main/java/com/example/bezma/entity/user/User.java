@@ -3,6 +3,7 @@ package com.example.bezma.entity.user;
 import com.example.bezma.common.base.BaseEntity;
 import com.example.bezma.entity.auth.Permission;
 import com.example.bezma.entity.auth.Role;
+import com.example.bezma.entity.branch.Branch;
 import com.example.bezma.entity.tenant.Tenant;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -64,6 +65,10 @@ public class User extends BaseEntity implements UserDetails {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id")
     private Role role;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id")
+    private Branch branch; // Chi nhánh mà nhân viên thuộc về
 
     // --- Status & Security ---
 
