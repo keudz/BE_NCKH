@@ -2,6 +2,7 @@ package com.example.bezma.service.impl;
 
 import com.example.bezma.dto.req.task.CreateTaskRequest;
 import com.example.bezma.dto.res.task.TaskResponse;
+import com.example.bezma.entity.notification.NotificationType;
 import com.example.bezma.entity.task.Task;
 import com.example.bezma.entity.task.TaskStatus;
 import com.example.bezma.entity.tenant.Tenant;
@@ -9,6 +10,7 @@ import com.example.bezma.entity.user.User;
 import com.example.bezma.repository.TaskRepository;
 import com.example.bezma.repository.TenantRepository;
 import com.example.bezma.repository.UserRepository;
+import com.example.bezma.service.NotificationPublisher;
 import com.example.bezma.service.iService.ITaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ public class TaskServiceImpl implements ITaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
+    private final NotificationPublisher notificationPublisher;
 
     @Override
     public List<TaskResponse> getMyTasks(Long userId) {
@@ -55,7 +58,21 @@ public class TaskServiceImpl implements ITaskService {
                 .tenant(tenant)
                 .build();
 
-        return mapToResponse(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+
+        // Gửi notification nếu có người được giao nhiệm vụ
+        if (assignee != null) {
+            notificationPublisher.publishNotification(
+                    assignee.getId(),
+                    tenant.getId(),
+                    "Công việc mới: " + task.getTitle(),
+                    "Bạn được giao nhiệm vụ: " + task.getDescription(),
+                    NotificationType.TASK_ASSIGNED,
+                    savedTask.getId()
+            );
+        }
+
+        return mapToResponse(savedTask);
     }
 
     @Override
