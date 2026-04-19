@@ -15,4 +15,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     @org.springframework.data.jpa.repository.Query("SELECT a FROM Attendance a WHERE a.tenant.id = :tenantId AND MONTH(a.checkTime) = :month AND YEAR(a.checkTime) = :year ORDER BY a.checkTime DESC")
     List<Attendance> getTenantHistoryByMonth(@org.springframework.data.repository.query.Param("tenantId") Long tenantId, @org.springframework.data.repository.query.Param("month") int month, @org.springframework.data.repository.query.Param("year") int year);
+
+    long countByTenantIdAndCheckTimeBetween(Long tenantId, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

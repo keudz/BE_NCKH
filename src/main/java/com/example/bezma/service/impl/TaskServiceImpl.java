@@ -90,8 +90,36 @@ public class TaskServiceImpl implements ITaskService {
                 .date(task.getDueDate() != null ? task.getDueDate().toString().substring(0, 10) : null)
                 .assigneeId(task.getAssignee() != null ? task.getAssignee().getId() : null)
                 .assigneeName(task.getAssignee() != null ? task.getAssignee().getFullName() : "Chưa giao")
+                .reportImages(task.getReportImages())
                 .createdAt(task.getCreatedAt())
                 .updatedAt(task.getUpdatedAt())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public String uploadReport(Long taskId, org.springframework.web.multipart.MultipartFile[] images) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+        
+        // Cập nhật trạng thái công việc thành REVIEW khi nộp báo cáo
+        task.setStatus(TaskStatus.REVIEW);
+        
+        if (images != null && images.length > 0) {
+            java.util.List<String> imageUrls = new java.util.ArrayList<>();
+            for (org.springframework.web.multipart.MultipartFile image : images) {
+                try {
+                    String url = com.example.bezma.util.FileUtils.saveFile("uploads/tasks", image);
+                    imageUrls.add(url);
+                } catch (java.io.IOException e) {
+                    throw new RuntimeException("Lỗi lưu file: " + e.getMessage());
+                }
+            }
+            task.setReportImages(String.join(",", imageUrls));
+        }
+        
+        taskRepository.save(task);
+        
+        return "Đã nộp báo cáo " + (images != null ? images.length : 0) + " ảnh!";
     }
 }

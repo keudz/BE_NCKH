@@ -47,7 +47,28 @@ public class AttendanceController {
         
         Attendance attendance = attendanceService.checkIn(currentUser.getId(), photo, lat, lon);
         
-        String message = "Điểm danh thành công!";
+        String message = "Điểm danh vào thành công!";
+        if (attendance.getStatus().name().contains("FAIL")) {
+            message = "Điểm danh thất bại: " + (attendance.getNote() != null ? attendance.getNote() : "Khuôn mặt không khớp");
+        }
+
+        return ApiResponse.<Attendance>builder()
+                .data(attendance)
+                .message(message)
+                .build();
+    }
+
+    @Operation(summary = "Điểm danh ra (Check-out)")
+    @PostMapping(value = "/checkout", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<Attendance> checkOut(
+            @AuthenticationPrincipal User currentUser,
+            @RequestParam("photo") MultipartFile photo,
+            @RequestParam("lat") BigDecimal lat,
+            @RequestParam("lon") BigDecimal lon) {
+        
+        Attendance attendance = attendanceService.checkOut(currentUser.getId(), photo, lat, lon);
+        
+        String message = "Điểm danh về thành công!";
         if (attendance.getStatus().name().contains("FAIL")) {
             message = "Điểm danh thất bại: " + (attendance.getNote() != null ? attendance.getNote() : "Khuôn mặt không khớp");
         }

@@ -18,6 +18,7 @@ public class TaskResponse {
     private String avatar;
     private Long assigneeId;
     private String assigneeName;
+    private String reportImages;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

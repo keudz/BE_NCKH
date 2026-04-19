@@ -207,6 +207,86 @@ public class AttendanceServiceImpl implements IAttendanceService {
     }
 
     @Override
+    @Transactional
+    public Attendance checkOut(Long userId, MultipartFile photo, BigDecimal lat, BigDecimal lon) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (!user.getIsFaceRegistered() || user.getFaceEmbedding() == null) {
+            throw new RuntimeException("Người dùng chưa đăng ký khuôn mặt!");
+        }
+
+        Attendance attendance = Attendance.builder()
+                .user(user)
+                .tenant(user.getTenant())
+                .checkTime(LocalDateTime.now())
+                .latitude(lat)
+                .longitude(lon)
+                .status(AttendanceStatus.PENDING)
+                .build();
+
+        try {
+            // --- Logic Lưu Ảnh Bằng Chứng (Evidence Photo) ---
+            String uploadDir = "uploads/attendance/";
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            String fileName = "checkout_" + userId + "_" + System.currentTimeMillis() + ".jpg";
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(photo.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            
+            attendance.setPhotoUrl("/" + uploadDir + fileName);
+
+            String url = aiServiceUrl + "/verify-with-embedding";
+            
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("image", new ByteArrayResource(photo.getBytes()) {
+                @Override
+                public String getFilename() { return photo.getOriginalFilename(); }
+            });
+            body.add("stored_embedding_json", user.getFaceEmbedding());
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, requestEntity, new ParameterizedTypeReference<Map<String, Object>>() {});
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Boolean verified = (Boolean) response.getBody().get("verified");
+                if (Boolean.TRUE.equals(verified)) {
+                    LocalTime now = attendance.getCheckTime().toLocalTime();
+                    LocalTime endTime = user.getTenant().getWorkingEndTime();
+                    if (endTime == null) endTime = LocalTime.of(17, 30);
+
+                    if (now.isBefore(endTime)) {
+                        attendance.setStatus(AttendanceStatus.EARLY_LEAVE);
+                        attendance.setNote("Về sớm (Về lúc " + now + ")");
+                    } else {
+                        attendance.setStatus(AttendanceStatus.CHECK_OUT);
+                        attendance.setNote("Về đúng giờ");
+                    }
+                } else {
+                    attendance.setStatus(AttendanceStatus.FAIL_FACE);
+                }
+            }
+        } catch (HttpClientErrorException.BadRequest e) {
+            log.error("AI Verification - Không thấy mặt: {}", e.getMessage());
+            attendance.setStatus(AttendanceStatus.FAIL_FACE);
+            attendance.setNote(ErrorCode.FACE_NOT_DETECTED.getMessage());
+        } catch (Exception e) {
+            log.error("Lỗi xử lý điểm danh về: {}", e.getMessage());
+            attendance.setStatus(AttendanceStatus.FAIL_FACE);
+            attendance.setNote("Lỗi hệ thống: " + e.getMessage());
+        }
+
+        return attendanceRepository.save(attendance);
+    }
+
+    @Override
     public List<Attendance> getMyAttendance(Long userId) {
         return attendanceRepository.findAllByUserIdOrderByCheckTimeDesc(userId);
     }

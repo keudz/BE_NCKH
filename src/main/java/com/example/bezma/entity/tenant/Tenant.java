@@ -78,6 +78,10 @@ public class Tenant extends BaseEntity {
     @Builder.Default
     private LocalTime workingStartTime = LocalTime.of(8, 30); // Giờ mặc định là 8:30 sáng
 
+    @Column(name = "working_end_time")
+    @Builder.Default
+    private LocalTime workingEndTime = LocalTime.of(17, 30); // Giờ mặc định là 5:30 chiều
+
     // --- Relationships ---
     @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<User> users;

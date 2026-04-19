@@ -9,4 +9,5 @@ public interface ITaskService {
     TaskResponse createTask(CreateTaskRequest request);
     TaskResponse updateTaskStatus(Long taskId, String status);
     List<TaskResponse> getTasksByTenant(Long tenantId);
+    String uploadReport(Long taskId, org.springframework.web.multipart.MultipartFile[] images);
 }

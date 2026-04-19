@@ -4,7 +4,7 @@ import com.example.bezma.common.res.ApiResponse;
 import com.example.bezma.dto.req.tenant.TenantRegistrationRequest;
 import com.example.bezma.dto.req.tenant.TenantUpdateRequest;
 import com.example.bezma.dto.res.tenant.TenantDetailResponse;
-import com.example.bezma.dto.res.tenant.TenantSummaryResponse;
+//import com.example.bezma.dto.res.tenant.TenantSummaryResponse;
 import com.example.bezma.service.iService.ITenantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -70,7 +70,7 @@ public class TenantController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Lấy danh sách tất cả Tenant (Admin)")
     @GetMapping
-    public ApiResponse<Page<TenantSummaryResponse>> getAll(
+    public ApiResponse<Page<TenantDetailResponse>> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id,desc") String[] sort) {
@@ -78,7 +78,7 @@ public class TenantController {
         // Xử lý sort linh hoạt: field,direction
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sort[1]), sort[0]));
 
-        return ApiResponse.<Page<TenantSummaryResponse>>builder()
+        return ApiResponse.<Page<TenantDetailResponse>>builder()
                 .data(tenantService.getAllTenants(pageable))
                 .build();
     }
@@ -95,7 +95,8 @@ public class TenantController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Cập nhật thông tin Tenant (Admin)")
     @PutMapping("/{id}")
-    public ApiResponse<TenantDetailResponse> update(@PathVariable Long id, @RequestBody @Valid TenantUpdateRequest request) {
+    public ApiResponse<TenantDetailResponse> update(@PathVariable Long id,
+            @RequestBody @Valid TenantUpdateRequest request) {
         return ApiResponse.<TenantDetailResponse>builder()
                 .data(tenantService.updateTenant(id, request))
                 .message("Cập nhật thông tin thành công!")

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -54,6 +55,17 @@ public class TaskController {
     public ApiResponse<List<TaskResponse>> getByTenant(@PathVariable Long tenantId) {
         return ApiResponse.<List<TaskResponse>>builder()
                 .data(taskService.getTasksByTenant(tenantId))
+                .build();
+    }
+
+    @Operation(summary = "Báo cáo công việc (Upload ảnh)")
+    @PostMapping("/{taskId}/report")
+    public ApiResponse<String> uploadReport(
+            @PathVariable Long taskId,
+            @RequestParam(value = "images", required = false) MultipartFile[] images) {
+        return ApiResponse.<String>builder()
+                .data(taskService.uploadReport(taskId, images))
+                .message("Đã nộp báo cáo hình ảnh!")
                 .build();
     }
 }

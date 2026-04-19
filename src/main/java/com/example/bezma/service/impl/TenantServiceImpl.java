@@ -4,7 +4,7 @@ import com.example.bezma.common.enumCom.ErrorCode;
 import com.example.bezma.dto.req.tenant.TenantRegistrationRequest;
 import com.example.bezma.dto.req.tenant.TenantUpdateRequest;
 import com.example.bezma.dto.res.tenant.TenantDetailResponse;
-import com.example.bezma.dto.res.tenant.TenantSummaryResponse;
+//import com.example.bezma.dto.res.tenant.TenantSummaryResponse;
 import com.example.bezma.entity.auth.Role;
 //import com.example.bezma.entity.tenant.PlanType;
 import com.example.bezma.entity.tenant.RegistrationStatus;
@@ -202,8 +202,8 @@ public class TenantServiceImpl implements ITenantService {
     }
 
     @Override
-    public Page<TenantSummaryResponse> getAllTenants(Pageable pageable) {
-        return tenantRepository.findAll(pageable).map(tenantMapper::toSummaryResponse);
+    public Page<TenantDetailResponse> getAllTenants(Pageable pageable) {
+        return tenantRepository.findAll(pageable).map(tenantMapper::toDetailResponse);
     }
 
     @Override
@@ -248,7 +248,6 @@ public class TenantServiceImpl implements ITenantService {
         tenant.setStatusConfirm(RegistrationStatus.VERIFIED);
         return tenantMapper.toDetailResponse(tenantRepository.save(tenant));
     }
-
 
     // Helper method để tái sử dụng và bắt lỗi Redis
     private void saveToCache(String key, Object data, int minutes) {

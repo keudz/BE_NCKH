@@ -47,6 +47,9 @@ public class Task {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
+    @Column(name = "report_images", columnDefinition = "TEXT")
+    private String reportImages;
+
 
     // @ManyToOne(fetch = FetchType.LAZY)
     // @JoinColumn(name = "project_id",nullable = false)
