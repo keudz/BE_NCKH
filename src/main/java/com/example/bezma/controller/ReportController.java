@@ -27,7 +27,7 @@ public class ReportController {
 
     // API 2: Admin xem toàn bộ tiến độ công ty
     @GetMapping("/tenant-progress")
-    @PreAuthorize("hasAnyAuthority('TENANT_ADMIN', 'SUPER_ADMIN')") // CHẶN NHÂN VIÊN GỌI API NÀY
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // CHẶN NHÂN VIÊN GỌI API NÀY
     public ApiResponse<ProgressReportResponse> getTenantProgress() {
         return ApiResponse.<ProgressReportResponse>builder()
                 .data(reportService.getTenantProgress())
