@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "attendances", indexes = {
-    @Index(name = "idx_attendance_tenant", columnList = "tenant_id")
+    @Index(name = "idx_attendance_tenant_time", columnList = "tenant_id, check_time")
 })
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 @Getter

@@ -6,6 +6,7 @@ import lombok.*;
 import com.example.bezma.common.base.BaseEntity;
 import com.example.bezma.entity.user.User;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -81,6 +82,17 @@ public class Tenant extends BaseEntity {
     @Column(name = "working_end_time")
     @Builder.Default
     private LocalTime workingEndTime = LocalTime.of(17, 30); // Giờ mặc định là 5:30 chiều
+
+    // --- Geofencing (Vị trí văn phòng) ---
+    @Column(name = "office_latitude", precision = 10, scale = 7)
+    private BigDecimal officeLatitude;
+
+    @Column(name = "office_longitude", precision = 10, scale = 7)
+    private BigDecimal officeLongitude;
+
+    @Column(name = "allowed_radius")
+    @Builder.Default
+    private Double allowedRadius = 200.0; // Bán kính cho phép điểm danh (mét), mặc định 200m
 
     // --- Relationships ---
     @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

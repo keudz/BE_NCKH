@@ -1,17 +1,19 @@
 package com.example.bezma.entity.task;
 
-// import com.example.bezma.entity.project.Project;
 import com.example.bezma.entity.tenant.Tenant;
 import com.example.bezma.entity.user.User;
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.Filter;
 
 @Entity
 @Table(name = "system_tasks", indexes = {
-    @Index(name = "idx_task_tenant", columnList = "tenant_id")
+    @Index(name = "idx_task_tenant_status", columnList = "tenant_id, status"),
+    @Index(name = "idx_task_tenant_created", columnList = "tenant_id, created_at"),
+    @Index(name = "idx_task_assignee", columnList = "assignee_id")
 })
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 @Getter
@@ -50,10 +52,39 @@ public class Task {
     @Column(name = "report_images", columnDefinition = "TEXT")
     private String reportImages;
 
+    // ── CHECK-IN: Bắt đầu thực hiện công việc tại hiện trường ──
 
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "project_id",nullable = false)
-    // private Project project;
+    @Column(name = "check_in_time")
+    private LocalDateTime checkInTime;
+
+    @Column(name = "check_in_latitude", precision = 10, scale = 7)
+    private BigDecimal checkInLatitude;
+
+    @Column(name = "check_in_longitude", precision = 10, scale = 7)
+    private BigDecimal checkInLongitude;
+
+    @Column(name = "check_in_photo")
+    private String checkInPhoto; // URL ảnh hiện trường khi bắt đầu
+
+    @Column(name = "check_in_note", columnDefinition = "TEXT")
+    private String checkInNote; // Ghi chú ngắn khi bắt đầu
+
+    // ── COMPLETION: Hoàn thành công việc ──
+
+    @Column(name = "completion_photo")
+    private String completionPhoto; // URL ảnh khi hoàn thành
+
+    @Column(name = "completion_time")
+    private LocalDateTime completionTime;
+
+    @Column(name = "result_note", columnDefinition = "TEXT")
+    private String resultNote; // Ghi chú kết quả công việc
+
+    @Column(name = "customer_confirmed")
+    @Builder.Default
+    private Boolean customerConfirmed = false; // Xác nhận của khách hàng
+
+    // ── Audit fields ──
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

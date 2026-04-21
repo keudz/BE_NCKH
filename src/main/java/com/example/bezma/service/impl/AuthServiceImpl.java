@@ -123,16 +123,16 @@ public class AuthServiceImpl implements IAuthService {
             Tenant tenant = tenantRepository.findById(request.getTenantId())
                     .orElseThrow(() -> new AppException(ErrorCode.TENANT_NOT_FOUND));
 
-            Role customerRole = roleRepository.findByName("CUSTOMER")
+            Role staffRole = roleRepository.findByName("STAFF")
                     .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
 
             user = User.builder()
                     .zaloId(zaloId)
                     .username(zaloId)
                     .password(passwordEncoder.encode("ZALO_SSO_RANDOM_" + System.currentTimeMillis()))
-                    .fullName("Khách hàng Zalo")
+                    .fullName("Nhân viên Zalo")
                     .tenant(tenant)
-                    .role(customerRole)
+                    .role(staffRole)
                     .isActive(true)
                     .isVerified(true)
                     .status(UserStatus.ACTIVE)

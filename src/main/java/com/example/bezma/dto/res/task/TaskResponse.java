@@ -2,6 +2,7 @@ package com.example.bezma.dto.res.task;
 
 import lombok.Builder;
 import lombok.Data;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -21,4 +22,20 @@ public class TaskResponse {
     private String reportImages;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // ── Check-in fields ──
+    private LocalDateTime checkInTime;
+    private BigDecimal checkInLatitude;
+    private BigDecimal checkInLongitude;
+    private String checkInPhoto;
+    private String checkInNote;
+
+    // ── Completion fields ──
+    private String completionPhoto;
+    private LocalDateTime completionTime;
+    private String resultNote;
+    private Boolean customerConfirmed;
+
+    // ── Computed ──
+    private Long durationMinutes; // Thời gian thực hiện (phút) = completionTime - checkInTime
 }

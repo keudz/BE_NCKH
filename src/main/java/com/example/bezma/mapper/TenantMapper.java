@@ -4,25 +4,18 @@ import com.example.bezma.dto.req.tenant.TenantRegistrationRequest;
 import com.example.bezma.dto.req.tenant.TenantUpdateRequest;
 import com.example.bezma.dto.res.tenant.TenantDetailResponse;
 import com.example.bezma.dto.res.tenant.TenantSummaryResponse;
-import com.example.bezma.entity.tenant.RegistrationStatus;
 import com.example.bezma.entity.tenant.Tenant;
-import org.mapstruct.AfterMapping;
-import org.mapstruct.BeanMapping;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
-import org.mapstruct.NullValuePropertyMappingStrategy;
-import org.mapstruct.ReportingPolicy;
+import org.mapstruct.*;
 
 import java.util.UUID;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE, imports = {RegistrationStatus.class})
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TenantMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "active", constant = "true")
     @Mapping(target = "isVerified", constant = "false")
-    @Mapping(target = "statusConfirm", expression = "java(RegistrationStatus.PENDING_VERIFICATION)")
+    @Mapping(target = "statusConfirm", expression = "java(com.example.bezma.entity.tenant.RegistrationStatus.PENDING_VERIFICATION)")
     @Mapping(target = "users", ignore = true)
     Tenant toEntity(TenantRegistrationRequest request);
 

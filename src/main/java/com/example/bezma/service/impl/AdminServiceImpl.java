@@ -52,10 +52,14 @@ public class AdminServiceImpl implements IAdminService {
 
         User savedUser = userRepository.save(user);
 
-        UserCreateResponse response = new UserCreateResponse();
-        response.setId(savedUser.getId());
-        response.setEmail(savedUser.getEmail());
-        return response;
+        // Cách cũ: Map thủ công
+        /*
+         * UserCreateResponse response = new UserCreateResponse();
+         * response.setId(savedUser.getId());
+         * response.setEmail(savedUser.getEmail());
+         * return response;
+         */
+        return userMapper.toCreateResponse(savedUser);
     }
 
     @Override

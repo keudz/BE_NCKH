@@ -2,13 +2,14 @@ package com.example.bezma.service.impl;
 
 import com.example.bezma.entity.attendance.Attendance;
 import com.example.bezma.entity.attendance.AttendanceStatus;
+import com.example.bezma.entity.tenant.Tenant;
 import com.example.bezma.entity.user.User;
 import com.example.bezma.exception.AppException;
 import com.example.bezma.common.enumCom.ErrorCode;
 import com.example.bezma.repository.AttendanceRepository;
 import com.example.bezma.repository.UserRepository;
 import com.example.bezma.service.iService.IAttendanceService;
-//import com.fasterxml.jackson.core.JsonProcessingException;
+import com.example.bezma.util.GeoUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -116,174 +117,98 @@ public class AttendanceServiceImpl implements IAttendanceService {
     }
 
     @Override
-    @Transactional
     public Attendance checkIn(Long userId, MultipartFile photo, BigDecimal lat, BigDecimal lon) {
+        // 1. Load user (READ-ONLY, không cần transaction)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         if (!user.getIsFaceRegistered() || user.getFaceEmbedding() == null) {
-            throw new RuntimeException("Người dùng chưa đăng ký khuôn mặt!");
+            throw new AppException(ErrorCode.FACE_NOT_DETECTED);
         }
 
-        Attendance attendance = Attendance.builder()
-                .user(user)
-                .tenant(user.getTenant())
-                .checkTime(LocalDateTime.now())
-                .latitude(lat)
-                .longitude(lon)
-                .status(AttendanceStatus.PENDING)
-                .build();
+        Tenant tenant = user.getTenant();
 
-        try {
-            // --- Logic Lưu Ảnh Bằng Chứng (Evidence Photo) ---
-            String uploadDir = "uploads/attendance/";
-            Path uploadPath = Paths.get(uploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
+        // 2. GEOFENCING: Kiểm tra vị trí TRƯỚC khi gọi AI (tiết kiệm tài nguyên)
+        validateLocation(tenant, lat, lon);
+
+        // 3. Lưu ảnh bằng chứng (I/O thuần, không cần transaction)
+        String photoUrl = saveEvidencePhoto("checkin", userId, photo);
+
+        // 4. Gọi AI Service để verify khuôn mặt (HTTP call, KHÔNG nằm trong transaction)
+        boolean faceVerified = verifyFaceWithAI(photo, user.getFaceEmbedding());
+
+        // 5. Xác định trạng thái điểm danh
+        AttendanceStatus status;
+        String note = null;
+
+        if (faceVerified) {
+            LocalTime now = LocalTime.now();
+            LocalTime startTime = tenant.getWorkingStartTime();
+            if (startTime == null) {
+                startTime = LocalTime.of(8, 0);
             }
 
-            String fileName = "checkin_" + userId + "_" + System.currentTimeMillis() + ".jpg";
-            Path filePath = uploadPath.resolve(fileName);
-            Files.copy(photo.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            
-            attendance.setPhotoUrl("/" + uploadDir + fileName); // Lưu đường dẫn tương đối
-            // ------------------------------------------------
-
-            String url = aiServiceUrl + "/verify-with-embedding";
-            
-            // ... (Phần gọi AI giữ nguyên)
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("image", new ByteArrayResource(photo.getBytes()) {
-                @Override
-                public String getFilename() {
-                    return photo.getOriginalFilename();
-                }
-            });
-            body.add("stored_embedding_json", user.getFaceEmbedding());
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    requestEntity,
-                    new ParameterizedTypeReference<Map<String, Object>>() {
-                    });
-
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                Boolean verified = (Boolean) response.getBody().get("verified");
-                if (Boolean.TRUE.equals(verified)) {
-                    // --- Logic phân loại Đúng giờ / Muộn ---
-                    LocalTime now = attendance.getCheckTime().toLocalTime();
-                    LocalTime startTime = user.getTenant().getWorkingStartTime();
-                    
-                    if (startTime == null) {
-                        startTime = LocalTime.of(8, 0); // Dự phòng nếu DB chưa có giá trị
-                    }
-
-                    if (now.isAfter(startTime)) {
-                        attendance.setStatus(AttendanceStatus.LATE);
-                        attendance.setNote("Đi muộn (Vào lúc " + now + ")");
-                    } else {
-                        attendance.setStatus(AttendanceStatus.ON_TIME);
-                    }
-                } else {
-                    attendance.setStatus(AttendanceStatus.FAIL_FACE);
-                }
+            if (now.isAfter(startTime)) {
+                status = AttendanceStatus.LATE;
+                note = "Đi muộn (Vào lúc " + now + ")";
+            } else {
+                status = AttendanceStatus.ON_TIME;
             }
-        } catch (HttpClientErrorException.BadRequest e) {
-            log.error("AI Verification - Không thấy mặt: {}", e.getMessage());
-            attendance.setStatus(AttendanceStatus.FAIL_FACE);
-            attendance.setNote(ErrorCode.FACE_NOT_DETECTED.getMessage());
-        } catch (Exception e) {
-            log.error("Lỗi xử lý điểm danh: {}", e.getMessage());
-            attendance.setStatus(AttendanceStatus.FAIL_FACE);
-            attendance.setNote("Lỗi hệ thống: " + e.getMessage());
+        } else {
+            status = AttendanceStatus.FAIL_FACE;
+            note = "Khuôn mặt không khớp với dữ liệu đã đăng ký";
         }
 
-        return attendanceRepository.save(attendance);
+        // 6. CHỈ phần save mới cần transaction (ngắn gọn, nhanh)
+        return saveAttendanceRecord(user, tenant, lat, lon, photoUrl, status, note);
     }
 
     @Override
-    @Transactional
     public Attendance checkOut(Long userId, MultipartFile photo, BigDecimal lat, BigDecimal lon) {
+        // 1. Load user (READ-ONLY)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         if (!user.getIsFaceRegistered() || user.getFaceEmbedding() == null) {
-            throw new RuntimeException("Người dùng chưa đăng ký khuôn mặt!");
+            throw new AppException(ErrorCode.FACE_NOT_DETECTED);
         }
 
-        Attendance attendance = Attendance.builder()
-                .user(user)
-                .tenant(user.getTenant())
-                .checkTime(LocalDateTime.now())
-                .latitude(lat)
-                .longitude(lon)
-                .status(AttendanceStatus.PENDING)
-                .build();
+        Tenant tenant = user.getTenant();
 
-        try {
-            // --- Logic Lưu Ảnh Bằng Chứng (Evidence Photo) ---
-            String uploadDir = "uploads/attendance/";
-            Path uploadPath = Paths.get(uploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
+        // 2. GEOFENCING: Kiểm tra vị trí
+        validateLocation(tenant, lat, lon);
+
+        // 3. Lưu ảnh bằng chứng
+        String photoUrl = saveEvidencePhoto("checkout", userId, photo);
+
+        // 4. Gọi AI Service (NGOÀI transaction)
+        boolean faceVerified = verifyFaceWithAI(photo, user.getFaceEmbedding());
+
+        // 5. Xác định trạng thái
+        AttendanceStatus status;
+        String note = null;
+
+        if (faceVerified) {
+            LocalTime now = LocalTime.now();
+            LocalTime endTime = tenant.getWorkingEndTime();
+            if (endTime == null) {
+                endTime = LocalTime.of(17, 30);
             }
 
-            String fileName = "checkout_" + userId + "_" + System.currentTimeMillis() + ".jpg";
-            Path filePath = uploadPath.resolve(fileName);
-            Files.copy(photo.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            
-            attendance.setPhotoUrl("/" + uploadDir + fileName);
-
-            String url = aiServiceUrl + "/verify-with-embedding";
-            
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("image", new ByteArrayResource(photo.getBytes()) {
-                @Override
-                public String getFilename() { return photo.getOriginalFilename(); }
-            });
-            body.add("stored_embedding_json", user.getFaceEmbedding());
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, requestEntity, new ParameterizedTypeReference<Map<String, Object>>() {});
-
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                Boolean verified = (Boolean) response.getBody().get("verified");
-                if (Boolean.TRUE.equals(verified)) {
-                    LocalTime now = attendance.getCheckTime().toLocalTime();
-                    LocalTime endTime = user.getTenant().getWorkingEndTime();
-                    if (endTime == null) endTime = LocalTime.of(17, 30);
-
-                    if (now.isBefore(endTime)) {
-                        attendance.setStatus(AttendanceStatus.EARLY_LEAVE);
-                        attendance.setNote("Về sớm (Về lúc " + now + ")");
-                    } else {
-                        attendance.setStatus(AttendanceStatus.CHECK_OUT);
-                        attendance.setNote("Về đúng giờ");
-                    }
-                } else {
-                    attendance.setStatus(AttendanceStatus.FAIL_FACE);
-                }
+            if (now.isBefore(endTime)) {
+                status = AttendanceStatus.EARLY_LEAVE;
+                note = "Về sớm (Về lúc " + now + ")";
+            } else {
+                status = AttendanceStatus.CHECK_OUT;
+                note = "Về đúng giờ";
             }
-        } catch (HttpClientErrorException.BadRequest e) {
-            log.error("AI Verification - Không thấy mặt: {}", e.getMessage());
-            attendance.setStatus(AttendanceStatus.FAIL_FACE);
-            attendance.setNote(ErrorCode.FACE_NOT_DETECTED.getMessage());
-        } catch (Exception e) {
-            log.error("Lỗi xử lý điểm danh về: {}", e.getMessage());
-            attendance.setStatus(AttendanceStatus.FAIL_FACE);
-            attendance.setNote("Lỗi hệ thống: " + e.getMessage());
+        } else {
+            status = AttendanceStatus.FAIL_FACE;
+            note = "Khuôn mặt không khớp với dữ liệu đã đăng ký";
         }
 
-        return attendanceRepository.save(attendance);
+        // 6. Save (trong transaction ngắn)
+        return saveAttendanceRecord(user, tenant, lat, lon, photoUrl, status, note);
     }
 
     @Override
@@ -299,5 +224,129 @@ public class AttendanceServiceImpl implements IAttendanceService {
     @Override
     public List<Attendance> getTenantHistoryByMonth(Long tenantId, int month, int year) {
         return attendanceRepository.getTenantHistoryByMonth(tenantId, month, year);
+    }
+
+    // ==========================================
+    // PRIVATE HELPER METHODS
+    // ==========================================
+
+    /**
+     * Kiểm tra vị trí GPS của nhân viên có nằm trong bán kính cho phép không.
+     * Nếu Tenant chưa cấu hình tọa độ văn phòng → bỏ qua (cho phép điểm danh ở bất kỳ đâu).
+     */
+    private void validateLocation(Tenant tenant, BigDecimal lat, BigDecimal lon) {
+        if (tenant.getOfficeLatitude() == null || tenant.getOfficeLongitude() == null) {
+            log.warn("Tenant {} chưa cấu hình tọa độ văn phòng, bỏ qua kiểm tra vị trí.", tenant.getId());
+            return; // Chưa cấu hình → skip, không block user
+        }
+
+        double allowedRadius = (tenant.getAllowedRadius() != null) ? tenant.getAllowedRadius() : 200.0;
+
+        boolean withinRadius = GeoUtils.isWithinRadius(
+                lat, lon,
+                tenant.getOfficeLatitude(), tenant.getOfficeLongitude(),
+                allowedRadius
+        );
+
+        if (!withinRadius) {
+            double distance = GeoUtils.calculateDistance(
+                    lat, lon,
+                    tenant.getOfficeLatitude(), tenant.getOfficeLongitude()
+            );
+            log.warn("User ngoài vùng cho phép. Khoảng cách: {}m, Bán kính: {}m",
+                    Math.round(distance), allowedRadius);
+            throw new AppException(ErrorCode.LOCATION_OUT_OF_RANGE);
+        }
+    }
+
+    /**
+     * Lưu ảnh bằng chứng điểm danh vào thư mục uploads/.
+     * Trả về đường dẫn tương đối của file ảnh.
+     */
+    private String saveEvidencePhoto(String prefix, Long userId, MultipartFile photo) {
+        try {
+            String uploadDir = "uploads/attendance/";
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            String fileName = prefix + "_" + userId + "_" + System.currentTimeMillis() + ".jpg";
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(photo.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            return "/" + uploadDir + fileName;
+        } catch (IOException e) {
+            log.error("Lỗi lưu ảnh bằng chứng: {}", e.getMessage());
+            return null; // Không block điểm danh nếu lưu ảnh thất bại
+        }
+    }
+
+    /**
+     * Gọi AI Service để verify khuôn mặt.
+     * Method này KHÔNG có @Transactional → không giữ DB connection trong khi chờ HTTP.
+     *
+     * @return true nếu khuôn mặt khớp, false nếu không khớp hoặc lỗi
+     */
+    private boolean verifyFaceWithAI(MultipartFile photo, String storedEmbedding) {
+        try {
+            String url = aiServiceUrl + "/verify-with-embedding";
+
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("image", new ByteArrayResource(photo.getBytes()) {
+                @Override
+                public String getFilename() {
+                    return photo.getOriginalFilename();
+                }
+            });
+            body.add("stored_embedding_json", storedEmbedding);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    requestEntity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {
+                    });
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Boolean verified = (Boolean) response.getBody().get("verified");
+                return Boolean.TRUE.equals(verified);
+            }
+
+            return false;
+        } catch (HttpClientErrorException.BadRequest e) {
+            log.error("AI Verification - Không thấy mặt: {}", e.getMessage());
+            return false;
+        } catch (Exception e) {
+            log.error("Lỗi gọi AI Service: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Lưu bản ghi Attendance vào DB. Chỉ method này cần @Transactional.
+     * Transaction rất ngắn (chỉ 1 lệnh INSERT), không giữ connection lâu.
+     */
+    @Transactional
+    protected Attendance saveAttendanceRecord(User user, Tenant tenant,
+                                              BigDecimal lat, BigDecimal lon,
+                                              String photoUrl,
+                                              AttendanceStatus status, String note) {
+        Attendance attendance = Attendance.builder()
+                .user(user)
+                .tenant(tenant)
+                .checkTime(LocalDateTime.now())
+                .latitude(lat)
+                .longitude(lon)
+                .photoUrl(photoUrl)
+                .status(status)
+                .note(note)
+                .build();
+
+        return attendanceRepository.save(attendance);
     }
 }
