@@ -43,6 +43,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (authentication != null) {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
+                    Long userId = jwtTokenProvider.getUserIdFromToken(jwt);
+                    if (userId != null) {
+                        request.setAttribute("userId", userId);
+                    }
+
                     Long tenantId = jwtTokenProvider.getTenantIdFromToken(jwt);
                     if (tenantId != null) {
                         TenantContext.setCurrentTenantId(tenantId);
