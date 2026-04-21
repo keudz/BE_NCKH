@@ -149,13 +149,15 @@ public class TenantServiceImpl implements ITenantService {
 
         // 3. Lấy Password tạm từ Redis (Quả bom hẹn giờ)
         String redisKey = "registration_checkpoint:" + tenant.getId();
-        String tempPassword = redisTemplate.opsForValue().get(redisKey).toString();
+        Object cachedPassword = redisTemplate.opsForValue().get(redisKey);
 
-        if (tempPassword == null) {
+        if (cachedPassword == null) {
             // Nếu Redis đã hết hạn thì coi như quá trình đăng ký thất bại (bị Listener xóa
             // rồi)
             throw new AppException(ErrorCode.REGISTRATION_TIMEOUT);
         }
+
+        String tempPassword = cachedPassword.toString();
 
         // 4. Tìm User Admin của Tenant này để kích hoạt
         // Username lúc này chính là Phone đã đăng ký

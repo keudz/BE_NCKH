@@ -46,7 +46,7 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/api/auth/login/zalo",
                                 "/api/v1/tenants/public/verify",
-                                "/api/v1/tenants/**",
+                                "/api/v1/tenants/public/**", // Chỉ cho phép các endpoint public của tenant
                                 "/api/v1/agent/**"
                         ).permitAll()
 

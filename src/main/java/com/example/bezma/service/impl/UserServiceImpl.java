@@ -9,7 +9,7 @@ import com.example.bezma.exception.AppException;
 import com.example.bezma.dto.res.user.UserSummaryResponse;
 import com.example.bezma.entity.user.User;
 import com.example.bezma.repository.RoleRepository;
-import com.example.bezma.repository.TenantRepository;
+//import com.example.bezma.repository.TenantRepository;
 import com.example.bezma.repository.UserRepository;
 import com.example.bezma.service.iService.IUserService;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ public class UserServiceImpl implements IUserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final TenantRepository tenantRepository;
+    // private final TenantRepository tenantRepository;
 
     private User getCurrentUser() {
         String identifier = SecurityContextHolder.getContext().getAuthentication().getName();
