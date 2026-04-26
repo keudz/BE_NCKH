@@ -36,6 +36,13 @@ public class TaskResponse {
     private String resultNote;
     private Boolean customerConfirmed;
 
+    // ── Customer Info ──
+    private String customerName;
+    private String companyName;
+    private String address;
+    private String phoneNumber;
+    private BigDecimal estimatedPrice;
+
     // ── Computed ──
     private Long durationMinutes; // Thời gian thực hiện (phút) = completionTime - checkInTime
 }

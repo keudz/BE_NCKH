@@ -104,6 +104,10 @@ public class User extends BaseEntity implements UserDetails {
     @Builder.Default
     private Boolean isFaceRegistered = false;
 
+    @Column(name = "must_change_password")
+    @Builder.Default
+    private Boolean mustChangePassword = false;
+
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {

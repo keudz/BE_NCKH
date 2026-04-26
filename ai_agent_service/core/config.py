@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-1.5-flash"
     
     IMAGE_PROVIDER: str = "pollinations"
-    IMAGE_API_KEY: str = "mock_key"
+    IMAGE_API_KEY: str = ""
     BACKEND_URL: str = "http://localhost:8080"
 
     class Config:

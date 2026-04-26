@@ -40,6 +40,15 @@ public class UserController {
                 .build();
     }
 
+    @Operation(summary = "Cập nhật thông tin cá nhân của phiên đăng nhập hiện tại")
+    @PutMapping("/profile")
+    public ApiResponse<UserSummaryResponse> updateProfile(@RequestBody UserUpdateRequest request) {
+        return ApiResponse.<UserSummaryResponse>builder()
+                .data(userService.updateMyProfile(request))
+                .message("Cập nhật thông tin cá nhân thành công!")
+                .build();
+    }
+
     @Operation(summary = "Lấy danh sách nhân viên (0: Đang làm việc, 1: Đã xóa)")
     @GetMapping
     public ApiResponse<List<UserSummaryResponse>> getAllUsers(

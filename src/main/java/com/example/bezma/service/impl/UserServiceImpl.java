@@ -9,10 +9,10 @@ import com.example.bezma.exception.AppException;
 import com.example.bezma.dto.res.user.UserSummaryResponse;
 import com.example.bezma.entity.user.User;
 import com.example.bezma.repository.RoleRepository;
-//import com.example.bezma.repository.TenantRepository;
 import com.example.bezma.repository.UserRepository;
 import com.example.bezma.service.iService.IUserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,12 +22,12 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements IUserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    // private final TenantRepository tenantRepository;
 
     private User getCurrentUser() {
         String identifier = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -40,10 +40,8 @@ public class UserServiceImpl implements IUserService {
     @Override
     @Transactional
     public UserSummaryResponse createUser(UserCreateRequest request) {
-        // 1. Lấy thông tin Admin đang gọi API
         User admin = getCurrentUser();
 
-        // 2. Kiểm tra trùng lặp
         if (userRepository.findByPhone(request.getPhone()).isPresent()) {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
         }
@@ -51,14 +49,12 @@ public class UserServiceImpl implements IUserService {
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
-        // 3. Lấy Role (Ưu tiên STAFF mặc định nếu không chọn)
         String roleName = (request.getRoles() != null && !request.getRoles().isEmpty())
                 ? request.getRoles().get(0)
                 : "STAFF";
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
 
-        // 4. Tạo User mới gán vào cùng Tenant của Admin
         User newUser = User.builder()
                 .username(request.getPhone())
                 .phone(request.getPhone())
@@ -72,7 +68,6 @@ public class UserServiceImpl implements IUserService {
                 .build();
 
         newUser.setIsDeleted(false);
-
         userRepository.save(newUser);
 
         return UserSummaryResponse.builder()
@@ -89,13 +84,40 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     public UserSummaryResponse getMyProfile() {
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User user = getCurrentUser();
 
         if (Boolean.FALSE.equals(user.getIsActive())) {
             throw new AppException(ErrorCode.USER_NOT_ACTIVE);
         }
+
+        return UserSummaryResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .avatar(user.getAvatar())
+                .isActive(user.getIsActive())
+                .roleName(user.getRole() != null ? user.getRole().getName() : null)
+                .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
+                .mustChangePassword(user.getMustChangePassword())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public UserSummaryResponse updateMyProfile(UserUpdateRequest request) {
+        User user = getCurrentUser();
+
+        if (request.getFullName() != null) {
+            user.setFullName(request.getFullName());
+        }
+
+        if (request.getAvatar() != null) {
+            user.setAvatar(request.getAvatar());
+        }
+
+        userRepository.save(user);
 
         return UserSummaryResponse.builder()
                 .id(user.getId())
@@ -112,13 +134,9 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     public List<UserSummaryResponse> getAllUsersInMyTenant(Boolean isDeleted) {
-
-        // 1. Xem ai đang gọi API này
         User currentUser = getCurrentUser();
-
         Long myTenantId = currentUser.getTenant().getId();
 
-        // 2. Lấy danh sách dựa trên isDeleted (mặc định false nếu null)
         Boolean filterDeleted = (isDeleted != null) ? isDeleted : false;
         List<User> users = userRepository.findAllByTenantIdAndIsDeleted(myTenantId, filterDeleted);
 
@@ -139,27 +157,19 @@ public class UserServiceImpl implements IUserService {
     @Override
     @Transactional
     public UserSummaryResponse updateUser(Long pathId, UserUpdateRequest request) {
-
-        // 1. Xác định ID người cần sửa (Lấy từ URL, nếu URL null thì lấy từ trong Body
-        // DTO)
         Long targetUserId = (pathId != null) ? pathId : request.getId();
         if (targetUserId == null) {
-            throw new AppException(ErrorCode.INVALID_MESSAGE); // Báo lỗi nếu thiếu ID
+            throw new AppException(ErrorCode.INVALID_MESSAGE);
         }
 
-        // 2. Lấy thông tin Admin đang gọi API
         User admin = getCurrentUser();
-
-        // 3. Lấy thông tin Nhân viên đang bị sửa
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // 🚨 CHỐT BẢO MẬT (MULTI-TENANT): Khác công ty thì báo lỗi 403 ngay!
         if (!admin.getTenant().getId().equals(targetUser.getTenant().getId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 4. Cập nhật các trường dữ liệu theo đúng DTO của bạn
         if (request.getFullName() != null) {
             targetUser.setFullName(request.getFullName());
         }
@@ -168,27 +178,23 @@ public class UserServiceImpl implements IUserService {
             targetUser.setAvatar(request.getAvatar());
         }
 
-        // 🚨 Kiểm tra đổi Số điện thoại
         if (request.getPhone() != null && !request.getPhone().equals(targetUser.getPhone())) {
             if (userRepository.findByPhone(request.getPhone()).isPresent()) {
-                throw new AppException(ErrorCode.USER_ALREADY_EXISTS); // Đã có người dùng số này
+                throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
             }
             targetUser.setPhone(request.getPhone());
-            targetUser.setUsername(request.getPhone()); // Đồng bộ SĐT vào Username
+            targetUser.setUsername(request.getPhone());
         }
 
-        // 🚨 Kiểm tra đổi Email
         if (request.getEmail() != null && !request.getEmail().equals(targetUser.getEmail())) {
             if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS); // Bắt đúng lỗi 1006 của Lead
+                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
             }
             targetUser.setEmail(request.getEmail());
         }
 
-        // 5. Lưu vào Database
         userRepository.save(targetUser);
 
-        // 6. Trả về thông tin mới nhất
         return UserSummaryResponse.builder()
                 .id(targetUser.getId())
                 .username(targetUser.getUsername())
@@ -205,30 +211,21 @@ public class UserServiceImpl implements IUserService {
     @Override
     @Transactional
     public void deleteUser(Long targetUserId) {
-
-        // 1. Lấy thông tin Admin đang gọi API
         User admin = getCurrentUser();
-
-        // 2. Lấy thông tin Nhân viên sắp bị bế đi
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // CHỐT 1 (MULTI-TENANT): Khác công ty thì báo lỗi 403
         if (!admin.getTenant().getId().equals(targetUser.getTenant().getId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // CHỐT 2: Admin không được tự tay bóp dái (xóa chính mình)
         if (admin.getId().equals(targetUser.getId())) {
             throw new AppException(ErrorCode.INVALID_MESSAGE);
         }
 
-        // 3. THỰC HIỆN XÓA MỀM (Soft Delete) theo logic is_deleted = 1
         targetUser.setIsActive(false);
         targetUser.setIsDeleted(true);
         targetUser.setStatus(UserStatus.DELETED);
-
-        // 4. Lưu lại sự thay đổi
         userRepository.save(targetUser);
     }
 
@@ -236,7 +233,6 @@ public class UserServiceImpl implements IUserService {
     @Transactional
     public void restoreUser(Long targetUserId) {
         User admin = getCurrentUser();
-
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
@@ -244,12 +240,24 @@ public class UserServiceImpl implements IUserService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 3. Khôi phục
         targetUser.setIsDeleted(false);
         targetUser.setIsActive(true);
         targetUser.setStatus(UserStatus.ACTIVE);
-
         userRepository.save(targetUser);
     }
 
+    @Override
+    @Transactional
+    public void changePassword(String oldPassword, String newPassword) {
+        User user = getCurrentUser();
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new AppException(ErrorCode.OLD_PASSWORD_INCORRECT);
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+        log.info("User {} changed password successfully and reset mustChangePassword flag.", user.getUsername());
+    }
 }

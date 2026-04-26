@@ -18,4 +18,5 @@ public class UserSummaryResponse {
     private String roleName;
     private String avatar;
     private Boolean isFaceRegistered;
+    private Boolean mustChangePassword;
 }

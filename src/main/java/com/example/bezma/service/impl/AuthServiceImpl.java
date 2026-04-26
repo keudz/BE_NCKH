@@ -37,6 +37,8 @@ public class AuthServiceImpl implements IAuthService {
     private final RoleRepository roleRepository;
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
+    private final org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
+    private final com.example.bezma.util.EmailService emailService;
 
     private UserSummaryResponse mapToUserSummaryResponse(User user) {
         return UserSummaryResponse.builder()
@@ -51,6 +53,7 @@ public class AuthServiceImpl implements IAuthService {
                 .roleName(user.getRole() != null ? user.getRole().getName() : null)
                 .isActive(user.getIsActive())
                 .isDeleted(user.getIsDeleted())
+                .mustChangePassword(user.getMustChangePassword())
                 .build();
     }
 
@@ -130,7 +133,8 @@ public class AuthServiceImpl implements IAuthService {
                     .zaloId(zaloId)
                     .username(zaloId)
                     .password(passwordEncoder.encode("ZALO_SSO_RANDOM_" + System.currentTimeMillis()))
-                    .fullName("Nhân viên Zalo")
+                    .fullName(request.getFullName() != null ? request.getFullName() : "Nhân viên Zalo")
+                    .avatar(request.getAvatar())
                     .tenant(tenant)
                     .role(staffRole)
                     .isActive(true)
@@ -147,8 +151,22 @@ public class AuthServiceImpl implements IAuthService {
             if (!user.getTenant().getId().equals(request.getTenantId())) {
                 throw new AppException(ErrorCode.UNAUTHORIZED);
             }
+
+            // Cập nhật thông tin từ Zalo nếu có thay đổi
+            boolean changed = false;
+            if (request.getFullName() != null && !request.getFullName().equals(user.getFullName())) {
+                user.setFullName(request.getFullName());
+                changed = true;
+            }
+            if (request.getAvatar() != null && !request.getAvatar().equals(user.getAvatar())) {
+                user.setAvatar(request.getAvatar());
+                changed = true;
+            }
+            if (changed) {
+                userRepository.save(user);
+            }
         }
-        
+
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
@@ -157,5 +175,64 @@ public class AuthServiceImpl implements IAuthService {
                 .refreshToken(refreshToken)
                 .user(mapToUserSummaryResponse(user))
                 .build();
+    }
+
+    @Override
+    public void requestTwoStepReset(String emailOrPhone) {
+        // 1. Tìm User (Admin)
+        User user = userRepository.findByUsername(emailOrPhone)
+                .or(() -> userRepository.findByEmail(emailOrPhone))
+                .or(() -> userRepository.findByPhone(emailOrPhone))
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        Tenant tenant = user.getTenant();
+        if (tenant == null)
+            throw new AppException(ErrorCode.TENANT_NOT_FOUND);
+
+        // 2. Tạo 2 mã OTP (6 số ngẫu nhiên)
+        String otpCompany = String.valueOf((int) (Math.random() * 900000) + 100000);
+        String otpAdmin = String.valueOf((int) (Math.random() * 900000) + 100000);
+
+        // 3. Lưu vào Redis (10 phút)
+        String keyComp = "2fa:reset:comp:" + user.getId();
+        String keyAdmin = "2fa:reset:admin:" + user.getId();
+        redisTemplate.opsForValue().set(keyComp, otpCompany, 10, java.util.concurrent.TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(keyAdmin, otpAdmin, 10, java.util.concurrent.TimeUnit.MINUTES);
+
+        // 4. Gửi Mail xác thực kép
+        emailService.sendTwoStepResetEmail(tenant.getEmail(), "DOANH NGHIỆP", otpCompany);
+        emailService.sendTwoStepResetEmail(user.getEmail(), "CHỦ SỞ HỮU", otpAdmin);
+    }
+
+    @Override
+    @Transactional
+    public void confirmTwoStepReset(String emailOrPhone, String companyOtp, String adminOtp, String newPassword) {
+        User user = userRepository.findByUsername(emailOrPhone)
+                .or(() -> userRepository.findByEmail(emailOrPhone))
+                .or(() -> userRepository.findByPhone(emailOrPhone))
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        String keyComp = "2fa:reset:comp:" + user.getId();
+        String keyAdmin = "2fa:reset:admin:" + user.getId();
+
+        Object cachedComp = redisTemplate.opsForValue().get(keyComp);
+        Object cachedAdmin = redisTemplate.opsForValue().get(keyAdmin);
+
+        if (cachedComp == null || cachedAdmin == null) {
+            throw new AppException(ErrorCode.TOKEN_EXPIRED);
+        }
+
+        if (!cachedComp.toString().equals(companyOtp) || !cachedAdmin.toString().equals(adminOtp)) {
+            throw new AppException(ErrorCode.INVALID_KEY);
+        }
+
+        // Kích hoạt đổi mật khẩu và hạ cờ
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+
+        // Dọn dẹp
+        redisTemplate.delete(keyComp);
+        redisTemplate.delete(keyAdmin);
     }
 }

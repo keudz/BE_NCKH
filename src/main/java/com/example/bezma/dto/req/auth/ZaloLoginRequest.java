@@ -11,4 +11,7 @@ public class ZaloLoginRequest {
 
     @NotNull(message = "Tenant ID không được để trống")
     private Long tenantId;
+
+    private String fullName;
+    private String avatar;
 }

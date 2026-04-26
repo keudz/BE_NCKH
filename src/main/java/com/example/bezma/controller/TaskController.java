@@ -60,7 +60,10 @@ public class TaskController {
 
     @Operation(summary = "Tạo task mới")
     @PostMapping
-    public ApiResponse<TaskResponse> createTask(@RequestBody CreateTaskRequest request) {
+    public ApiResponse<TaskResponse> createTask(
+            @RequestBody CreateTaskRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        request.setTenantId(currentUser.getTenant().getId());
         return ApiResponse.<TaskResponse>builder()
                 .data(taskService.createTask(request))
                 .message("Tạo task thành công!")
@@ -85,6 +88,15 @@ public class TaskController {
         return ApiResponse.<TaskResponse>builder()
                 .data(taskService.claimTask(taskId, currentUser.getId()))
                 .message("Nhận task thành công! Bạn có thể bắt đầu thực hiện.")
+                .build();
+    }
+
+    @Operation(summary = "Xóa task (Chỉ Admin hoặc người tạo)")
+    @DeleteMapping("/{taskId}")
+    public ApiResponse<Void> deleteTask(@PathVariable Long taskId) {
+        taskService.deleteTask(taskId);
+        return ApiResponse.<Void>builder()
+                .message("Xóa công việc thành công!")
                 .build();
     }
 
