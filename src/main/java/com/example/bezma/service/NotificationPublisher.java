@@ -5,6 +5,7 @@ import com.example.bezma.dto.res.notification.NotificationResponse;
 import com.example.bezma.entity.notification.NotificationType;
 import com.example.bezma.service.iService.INotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,6 +18,7 @@ public class NotificationPublisher {
     /**
      * Tạo notification và gửi real-time qua WebSocket
      */
+    @Async
     public void publishNotification(Long userId, Long tenantId, String title, String message,
                                    NotificationType type, Long relatedTaskId) {
         // Lưu vào database

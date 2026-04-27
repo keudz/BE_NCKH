@@ -40,6 +40,15 @@ public class UserController {
                 .build();
     }
 
+    @Operation(summary = "Cập nhật thông tin cá nhân của phiên đăng nhập hiện tại")
+    @PutMapping("/profile")
+    public ApiResponse<UserSummaryResponse> updateProfile(@RequestBody UserUpdateRequest request) {
+        return ApiResponse.<UserSummaryResponse>builder()
+                .data(userService.updateMyProfile(request))
+                .message("Cập nhật thông tin cá nhân thành công!")
+                .build();
+    }
+
     @Operation(summary = "Lấy danh sách nhân viên (0: Đang làm việc, 1: Đã xóa)")
     @GetMapping
     public ApiResponse<List<UserSummaryResponse>> getAllUsers(
@@ -83,5 +92,12 @@ public class UserController {
         return ApiResponse.<Void>builder()
                 .message("Khôi phục nhân viên thành công!")
                 .build();
+    }
+
+    @Operation(summary = "Kích hoạt tài khoản nhân viên qua Email")
+    @GetMapping("/public/activate")
+    public String activateUser(@RequestParam("token") String token) {
+        userService.activateUser(token);
+        return "Tài khoản của bạn đã được kích hoạt thành công! Vui lòng kiểm tra email để nhận mật khẩu đăng nhập.";
     }
 }

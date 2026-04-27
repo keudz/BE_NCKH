@@ -9,4 +9,8 @@ public class UserUpdateRequest {
     private String avatar;
     private String phone;
     private String email;
+    private String birthday;
+    private String gender;
+    private String address;
+    private String identityCard;
 }

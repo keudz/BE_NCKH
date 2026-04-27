@@ -12,4 +12,8 @@ public class UserCreateRequest {
     private String password;
     private List<String> roles;
     private String status;
+    private String birthday;
+    private String gender;
+    private String address;
+    private String identityCard;
 }

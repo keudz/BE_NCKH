@@ -17,7 +17,7 @@ import com.example.bezma.repository.RoleRepository;
 import com.example.bezma.repository.TenantRepository;
 import com.example.bezma.repository.UserRepository;
 import com.example.bezma.service.iService.ITenantService;
-import com.example.bezma.util.DataUtils;
+//import com.example.bezma.util.DataUtils;
 import com.example.bezma.util.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Locale;
+//import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -84,51 +84,65 @@ public class TenantServiceImpl implements ITenantService {
     @Override
     @Transactional
     public TenantDetailResponse registerTenant(TenantRegistrationRequest request) {
-        log.info("Bắt đầu đăng ký Tenant và Admin: {}", request.getName());
+        log.info("Bắt đầu đăng ký Tenant chuyên nghiệp: {}", request.getName());
 
-        // 1. Check trùng Tenant Slug & Phone (Username)
-        if (userRepository.existsByUsername(request.getPhone())) {
+        // 1. Kiểm tra trùng lặp: Tenant Code (nếu có) và Admin (Username/Email)
+        if (userRepository.existsByUsername(request.getAdminPhone())) {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
         }
+        if (userRepository.existsByEmail(request.getAdminEmail())) {
+            throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
+        }
+        if (tenantRepository.existsByEmail(request.getEmail())) {
+            throw new AppException(ErrorCode.USER_ALREADY_EXISTS); // Hoặc tạo ErrorCode mới nếu muốn
+        }
 
-        // 2. Tìm Role Admin trước khi tạo User
-        // Giả sử trong DB ông đặt tên Role là "ADMIN" hoặc "TENANT_ADMIN"
-        Role adminRole = roleRepository.findByName("ADMIN")
+        // 2. Tìm Role TENANT_ADMIN (Ưu tiên) hoặc ADMIN
+        Role adminRole = roleRepository.findByName("TENANT_ADMIN")
+                .or(() -> roleRepository.findByName("ADMIN"))
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
-        String generatedSlug = DataUtils.generateSlug(request.getName());
 
-        // 3. Tạo Tenant
+        // 3. Tạo Tenant từ Request (MapStruct sẽ map MST, Địa chỉ, Loại hình tự động)
         Tenant tenant = tenantMapper.toEntity(request);
         String token = UUID.randomUUID().toString();
-        tenant.setTenantCode(request.getName().toLowerCase(Locale.ROOT));
+
+        tenant.setRepresentativeName(request.getAdminFullName()); // Người đại diện
         tenant.setVerificationToken(token);
-        tenant.setPlanType(request.getPlanType());
         tenant.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
         tenant.setStatusConfirm(RegistrationStatus.PENDING_VERIFICATION);
-        tenant.setActive(true);
-        tenant.setSlug(generatedSlug);
+        tenant.setActive(false); // Chưa confirm thì chưa active
+
         tenant = tenantRepository.save(tenant);
 
-        // 4. Tạo User Admin cho Tenant đó và gán Role
-        String defaultPass = "123456";
+        // 4. Tạo Mật khẩu tạm thời (6 ký tự CHỮ HOA/SỐ + đuôi @)
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder sb = new StringBuilder();
+        java.util.Random random = new java.util.Random();
+        for (int i = 0; i < 6; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        String tempPassword = sb.toString() + "@";
+
+        // 5. Tạo User Admin (Chủ sở hữu Tenant)
         User admin = User.builder()
-                .username(request.getPhone())
-                .password(passwordEncoder.encode(defaultPass))
-                .email(request.getEmail())
-                .fullName("Admin " + request.getName())
+                .username(request.getAdminPhone()) // Đăng nhập bằng SĐT cá nhân Admin
+                .password(passwordEncoder.encode(tempPassword))
+                .email(request.getAdminEmail()) // Email cá nhân Admin
+                .fullName(request.getAdminFullName())
                 .tenant(tenant)
-                .role(adminRole) // Gán cái Role vừa tìm được vào đây
+                .role(adminRole)
                 .isActive(false)
+                .mustChangePassword(true) // BẮT BUỘC ĐỔI MK LẦN ĐẦU
                 .status(UserStatus.PENDING_ACTIVE)
                 .build();
         userRepository.save(admin);
 
-        // 5. Lưu Password tạm vào Redis với TTL 5 phút (300 giây)
+        // 6. Lưu Password tạm vào Redis để gửi sau khi verify thành công
         String redisKey = "registration_checkpoint:" + tenant.getId();
-        redisTemplate.opsForValue().set(redisKey, defaultPass, 5, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(redisKey, tempPassword, 24, TimeUnit.HOURS);
 
-        // 6. Gửi mail
-        emailService.sendVerificationEmail(tenant.getEmail(), token);
+        // 7. Gửi mail xác thực
+        emailService.sendVerificationEmail(tenant.getEmail(), token); // Gửi về Email doanh nghiệp
 
         return tenantMapper.toDetailResponse(tenant);
     }

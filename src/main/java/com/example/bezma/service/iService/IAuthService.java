@@ -9,4 +9,7 @@ public interface IAuthService {
     AuthResponse login(LoginRequest request);
     AuthResponse refreshToken(RefreshTokenRequest request);
     AuthResponse loginZalo(ZaloLoginRequest request);
+    
+    void requestTwoStepReset(String emailOrPhone);
+    void confirmTwoStepReset(String emailOrPhone, String companyOtp, String adminOtp, String newPassword);
 }

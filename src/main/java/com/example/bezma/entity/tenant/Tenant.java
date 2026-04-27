@@ -37,7 +37,7 @@ public class Tenant extends BaseEntity {
 
     @Column(name = "slug", unique = true, nullable = false, length = 100)
     private String slug; // Phục vụ SEO
-    @Column(name = "phone", nullable = false, length = 10)
+    @Column(name = "phone", nullable = false, length = 20)
     private String phone;
 
     @Column(name = "domain", unique = true, length = 100)
@@ -74,6 +74,33 @@ public class Tenant extends BaseEntity {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    // --- Legal Info ---
+    @Column(name = "tax_code", length = 20)
+    private String taxCode;
+
+    @Column(name = "business_type", length = 100)
+    private String businessType;
+
+    @Column(name = "representative_name", length = 100)
+    private String representativeName;
+
+    // --- Granular Address ---
+    @Column(name = "province")
+    private String province;
+
+    @Column(name = "district")
+    private String district;
+
+    @Column(name = "ward")
+    private String ward;
+
+    @Column(name = "street")
+    private String street;
+
+    public String getFullAddress() {
+        return String.format("%s, %s, %s, %s", street, ward, district, province);
+    }
 
     @Column(name = "working_start_time")
     @Builder.Default

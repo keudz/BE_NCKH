@@ -48,9 +48,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
         @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId")
         Optional<User> findFirstByTenantId(@Param("tenantId") Long tenantId);
 
-        Optional<User> findByZaloId(String zaloId);
+        @Query("SELECT u FROM User u " +
+                "LEFT JOIN FETCH u.tenant t " +
+                "LEFT JOIN FETCH u.role r " +
+                "WHERE u.zaloId = :zaloId")
+        Optional<User> findByZaloId(@Param("zaloId") String zaloId);
 
-        Optional<User> findByPhone(String phone);
+        @Query("SELECT u FROM User u " +
+                "LEFT JOIN FETCH u.tenant t " +
+                "LEFT JOIN FETCH u.role r " +
+                "WHERE u.phone = :phone")
+        Optional<User> findByPhone(@Param("phone") String phone);
 
         // Lấy toàn bộ danh sách nhân viên của 1 doanh nghiệp theo trạng thái xóa
         List<User> findAllByTenantIdAndIsDeleted(Long tenantId, Boolean isDeleted);

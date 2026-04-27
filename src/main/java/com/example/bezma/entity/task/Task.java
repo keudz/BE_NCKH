@@ -84,6 +84,26 @@ public class Task {
     @Builder.Default
     private Boolean customerConfirmed = false; // Xác nhận của khách hàng
 
+    // ── Customer Info ──
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private com.example.bezma.entity.customer.Customer customer;
+
+    @Column(name = "customer_name")
+    private String customerName;
+
+    @Column(name = "company_name")
+    private String companyName;
+
+    @Column(name = "address")
+    private String address;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    @Column(name = "estimated_price")
+    private BigDecimal estimatedPrice;
+
     // ── Audit fields ──
 
     private LocalDateTime createdAt;

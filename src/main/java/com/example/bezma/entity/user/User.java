@@ -56,6 +56,18 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "avatar_url")
     private String avatar;
 
+    @Column(name = "birthday")
+    private LocalDateTime birthday;
+
+    @Column(name = "gender", length = 10)
+    private String gender;
+
+    @Column(name = "address")
+    private String address;
+
+    @Column(name = "identity_card", length = 20)
+    private String identityCard;
+
     // --- Quan hệ cốt lõi ---
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -103,6 +115,10 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "is_face_registered")
     @Builder.Default
     private Boolean isFaceRegistered = false;
+
+    @Column(name = "must_change_password")
+    @Builder.Default
+    private Boolean mustChangePassword = false;
 
     @Override
     @JsonIgnore

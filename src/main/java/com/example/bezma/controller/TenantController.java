@@ -13,9 +13,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
+//import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+//import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+//import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/tenants")
@@ -39,12 +43,32 @@ public class TenantController {
     }
 
     @Operation(summary = "Xác thực Tenant qua token")
-    @GetMapping("/public/verify")
-    public ApiResponse<Boolean> verify(@RequestParam String token) {
-        return ApiResponse.<Boolean>builder()
-                .data(tenantService.verifyTenant(token))
-                .message("Xác thực tài khoản thành công!")
-                .build();
+    @GetMapping(value = "/public/verify", produces = MediaType.TEXT_HTML_VALUE)
+    @ResponseBody
+    public String verify(@RequestParam String token) {
+        tenantService.verifyTenant(token);
+        return """
+                <html>
+                    <head>
+                        <title>Verification Success</title>
+                        <style>
+                            body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f8fafc; font-family: 'Arial', sans-serif; }
+                            .card { background: white; padding: 50px 80px; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); text-align: center; border: 1px solid #e2e8f0; }
+                            h1 { color: #16a34a; font-size: 64px; margin: 0; font-weight: 900; letter-spacing: -0.025em; }
+                            p { color: #475569; margin-top: 16px; font-size: 20px; font-weight: 500; }
+                            .icon { font-size: 48px; margin-bottom: 20px; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="card">
+                            <div class="icon">✅</div>
+                            <h1>SUCCESS!</h1>
+                            <p>Xác thực tài khoản thành công
+                                <br>Hãy Chờ Mail Thông Tin Tài Khoản Đăng Nhập được gửi về</p>
+                        </div>
+                    </body>
+                </html>
+                """;
     }
 
     @Operation(summary = "Lấy thông tin public của Tenant qua Slug")
@@ -62,10 +86,6 @@ public class TenantController {
                 .data(tenantService.checkSlugAvailability(slug))
                 .build();
     }
-
-    // ==========================================
-    // NHÓM 2: MANAGEMENT APIs (Cần quyền Admin/Owner)
-    // ==========================================
 
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Lấy danh sách tất cả Tenant (Admin)")

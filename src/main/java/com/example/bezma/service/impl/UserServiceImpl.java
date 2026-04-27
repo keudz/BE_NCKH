@@ -9,25 +9,31 @@ import com.example.bezma.exception.AppException;
 import com.example.bezma.dto.res.user.UserSummaryResponse;
 import com.example.bezma.entity.user.User;
 import com.example.bezma.repository.RoleRepository;
-//import com.example.bezma.repository.TenantRepository;
 import com.example.bezma.repository.UserRepository;
 import com.example.bezma.service.iService.IUserService;
+import com.example.bezma.util.EmailService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements IUserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    // private final TenantRepository tenantRepository;
+    private final EmailService emailService;
 
     private User getCurrentUser() {
         String identifier = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -37,13 +43,23 @@ public class UserServiceImpl implements IUserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 6; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.append("@").toString();
+    }
+
     @Override
     @Transactional
     public UserSummaryResponse createUser(UserCreateRequest request) {
-        // 1. Lấy thông tin Admin đang gọi API
         User admin = getCurrentUser();
 
-        // 2. Kiểm tra trùng lặp
+        log.info("Creating new user with email: {}", request.getEmail());
+
         if (userRepository.findByPhone(request.getPhone()).isPresent()) {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
         }
@@ -51,52 +67,156 @@ public class UserServiceImpl implements IUserService {
             throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
-        // 3. Lấy Role (Ưu tiên STAFF mặc định nếu không chọn)
         String roleName = (request.getRoles() != null && !request.getRoles().isEmpty())
                 ? request.getRoles().get(0)
                 : "STAFF";
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
 
-        // 4. Tạo User mới gán vào cùng Tenant của Admin
+        // Dùng UUID làm mật khẩu tạm thời để tránh null
+        String tempPassword = UUID.randomUUID().toString();
+        
         User newUser = User.builder()
                 .username(request.getPhone())
                 .phone(request.getPhone())
                 .fullName(request.getFullName())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(tempPassword))
                 .role(role)
                 .tenant(admin.getTenant())
-                .isActive(true)
-                .status(UserStatus.ACTIVE)
+                .isActive(false)
+                .status(UserStatus.PENDING_ACTIVE)
+                .verificationToken(UUID.randomUUID().toString())
+                .verificationTokenExpiry(LocalDateTime.now().plusDays(7))
+                .gender(request.getGender())
+                .address(request.getAddress())
+                .identityCard(request.getIdentityCard())
+                .mustChangePassword(true)
                 .build();
+
+        if (request.getBirthday() != null && !request.getBirthday().isEmpty()) {
+            try {
+                newUser.setBirthday(LocalDateTime.parse(request.getBirthday() + "T00:00:00"));
+            } catch (Exception e) {
+                log.warn("Invalid birthday format: {}", request.getBirthday());
+            }
+        }
 
         newUser.setIsDeleted(false);
-
         userRepository.save(newUser);
 
-        return UserSummaryResponse.builder()
-                .id(newUser.getId())
-                .username(newUser.getUsername())
-                .fullName(newUser.getFullName())
-                .email(newUser.getEmail())
-                .phone(newUser.getPhone())
-                .isActive(newUser.getIsActive())
-                .roleName(role.getName())
-                .tenantId(admin.getTenant().getId())
-                .build();
+        // Gửi email mời
+        emailService.sendEmployeeInvitation(newUser.getEmail(), newUser.getFullName(), newUser.getVerificationToken());
+
+        return mapToResponse(newUser);
+    }
+
+    @Override
+    @Transactional
+    public void activateUser(String token) {
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_TOKEN));
+
+        if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.TOKEN_EXPIRED);
+        }
+
+        String rawPassword = generateRandomPassword();
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setIsActive(true);
+        user.setIsVerified(true);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+        
+        userRepository.save(user);
+
+        // Gửi email mật khẩu
+        emailService.sendEmployeeCredentials(user.getEmail(), user.getFullName(), user.getUsername(), rawPassword);
     }
 
     @Override
     public UserSummaryResponse getMyProfile() {
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User user = getCurrentUser();
 
         if (Boolean.FALSE.equals(user.getIsActive())) {
             throw new AppException(ErrorCode.USER_NOT_ACTIVE);
         }
 
+        return mapToResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public UserSummaryResponse updateMyProfile(UserUpdateRequest request) {
+        User user = getCurrentUser();
+        updateUserDetails(user, request);
+        userRepository.save(user);
+        return mapToResponse(user);
+    }
+
+    @Override
+    public List<UserSummaryResponse> getAllUsersInMyTenant(Boolean isDeleted) {
+        User currentUser = getCurrentUser();
+        Long myTenantId = currentUser.getTenant().getId();
+
+        Boolean filterDeleted = (isDeleted != null) ? isDeleted : false;
+        List<User> users = userRepository.findAllByTenantIdAndIsDeleted(myTenantId, filterDeleted);
+
+        return users.stream().map(this::mapToResponse).toList();
+    }
+
+    @Override
+    @Transactional
+    public UserSummaryResponse updateUser(Long pathId, UserUpdateRequest request) {
+        Long targetUserId = (pathId != null) ? pathId : request.getId();
+        User admin = getCurrentUser();
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (!admin.getTenant().getId().equals(targetUser.getTenant().getId())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        updateUserDetails(targetUser, request);
+        userRepository.save(targetUser);
+
+        return mapToResponse(targetUser);
+    }
+
+    private void updateUserDetails(User user, UserUpdateRequest request) {
+        if (request.getFullName() != null) user.setFullName(request.getFullName());
+        if (request.getAvatar() != null) user.setAvatar(request.getAvatar());
+        if (request.getGender() != null) user.setGender(request.getGender());
+        if (request.getAddress() != null) user.setAddress(request.getAddress());
+        if (request.getIdentityCard() != null) user.setIdentityCard(request.getIdentityCard());
+        
+        if (request.getBirthday() != null && !request.getBirthday().isEmpty()) {
+            try {
+                user.setBirthday(LocalDateTime.parse(request.getBirthday() + "T00:00:00"));
+            } catch (Exception e) {
+                log.warn("Invalid birthday format: {}", request.getBirthday());
+            }
+        }
+
+        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone())) {
+            if (userRepository.findByPhone(request.getPhone()).isPresent()) {
+                throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
+            }
+            user.setPhone(request.getPhone());
+            user.setUsername(request.getPhone());
+        }
+
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            }
+            user.setEmail(request.getEmail());
+        }
+    }
+
+    private UserSummaryResponse mapToResponse(User user) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         return UserSummaryResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -107,128 +227,32 @@ public class UserServiceImpl implements IUserService {
                 .isActive(user.getIsActive())
                 .roleName(user.getRole() != null ? user.getRole().getName() : null)
                 .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
-                .build();
-    }
-
-    @Override
-    public List<UserSummaryResponse> getAllUsersInMyTenant(Boolean isDeleted) {
-
-        // 1. Xem ai đang gọi API này
-        User currentUser = getCurrentUser();
-
-        Long myTenantId = currentUser.getTenant().getId();
-
-        // 2. Lấy danh sách dựa trên isDeleted (mặc định false nếu null)
-        Boolean filterDeleted = (isDeleted != null) ? isDeleted : false;
-        List<User> users = userRepository.findAllByTenantIdAndIsDeleted(myTenantId, filterDeleted);
-
-        return users.stream().map(user -> UserSummaryResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .avatar(user.getAvatar())
-                .isActive(user.getIsActive())
-                .isDeleted(user.getIsDeleted())
-                .roleName(user.getRole() != null ? user.getRole().getName() : null)
-                .tenantId(myTenantId)
-                .build()).toList();
-    }
-
-    @Override
-    @Transactional
-    public UserSummaryResponse updateUser(Long pathId, UserUpdateRequest request) {
-
-        // 1. Xác định ID người cần sửa (Lấy từ URL, nếu URL null thì lấy từ trong Body
-        // DTO)
-        Long targetUserId = (pathId != null) ? pathId : request.getId();
-        if (targetUserId == null) {
-            throw new AppException(ErrorCode.INVALID_MESSAGE); // Báo lỗi nếu thiếu ID
-        }
-
-        // 2. Lấy thông tin Admin đang gọi API
-        User admin = getCurrentUser();
-
-        // 3. Lấy thông tin Nhân viên đang bị sửa
-        User targetUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-
-        // 🚨 CHỐT BẢO MẬT (MULTI-TENANT): Khác công ty thì báo lỗi 403 ngay!
-        if (!admin.getTenant().getId().equals(targetUser.getTenant().getId())) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
-        }
-
-        // 4. Cập nhật các trường dữ liệu theo đúng DTO của bạn
-        if (request.getFullName() != null) {
-            targetUser.setFullName(request.getFullName());
-        }
-
-        if (request.getAvatar() != null) {
-            targetUser.setAvatar(request.getAvatar());
-        }
-
-        // 🚨 Kiểm tra đổi Số điện thoại
-        if (request.getPhone() != null && !request.getPhone().equals(targetUser.getPhone())) {
-            if (userRepository.findByPhone(request.getPhone()).isPresent()) {
-                throw new AppException(ErrorCode.USER_ALREADY_EXISTS); // Đã có người dùng số này
-            }
-            targetUser.setPhone(request.getPhone());
-            targetUser.setUsername(request.getPhone()); // Đồng bộ SĐT vào Username
-        }
-
-        // 🚨 Kiểm tra đổi Email
-        if (request.getEmail() != null && !request.getEmail().equals(targetUser.getEmail())) {
-            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-                throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS); // Bắt đúng lỗi 1006 của Lead
-            }
-            targetUser.setEmail(request.getEmail());
-        }
-
-        // 5. Lưu vào Database
-        userRepository.save(targetUser);
-
-        // 6. Trả về thông tin mới nhất
-        return UserSummaryResponse.builder()
-                .id(targetUser.getId())
-                .username(targetUser.getUsername())
-                .fullName(targetUser.getFullName())
-                .email(targetUser.getEmail())
-                .phone(targetUser.getPhone())
-                .avatar(targetUser.getAvatar())
-                .isActive(targetUser.getIsActive())
-                .roleName(targetUser.getRole() != null ? targetUser.getRole().getName() : null)
-                .tenantId(targetUser.getTenant() != null ? targetUser.getTenant().getId() : null)
+                .birthday(user.getBirthday() != null ? user.getBirthday().format(formatter) : null)
+                .gender(user.getGender())
+                .address(user.getAddress())
+                .identityCard(user.getIdentityCard())
+                .mustChangePassword(user.getMustChangePassword())
                 .build();
     }
 
     @Override
     @Transactional
     public void deleteUser(Long targetUserId) {
-
-        // 1. Lấy thông tin Admin đang gọi API
         User admin = getCurrentUser();
-
-        // 2. Lấy thông tin Nhân viên sắp bị bế đi
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // CHỐT 1 (MULTI-TENANT): Khác công ty thì báo lỗi 403
         if (!admin.getTenant().getId().equals(targetUser.getTenant().getId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // CHỐT 2: Admin không được tự tay bóp dái (xóa chính mình)
         if (admin.getId().equals(targetUser.getId())) {
             throw new AppException(ErrorCode.INVALID_MESSAGE);
         }
 
-        // 3. THỰC HIỆN XÓA MỀM (Soft Delete) theo logic is_deleted = 1
         targetUser.setIsActive(false);
         targetUser.setIsDeleted(true);
         targetUser.setStatus(UserStatus.DELETED);
-
-        // 4. Lưu lại sự thay đổi
         userRepository.save(targetUser);
     }
 
@@ -236,7 +260,6 @@ public class UserServiceImpl implements IUserService {
     @Transactional
     public void restoreUser(Long targetUserId) {
         User admin = getCurrentUser();
-
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
@@ -244,12 +267,24 @@ public class UserServiceImpl implements IUserService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 3. Khôi phục
         targetUser.setIsDeleted(false);
         targetUser.setIsActive(true);
         targetUser.setStatus(UserStatus.ACTIVE);
-
         userRepository.save(targetUser);
     }
 
+    @Override
+    @Transactional
+    public void changePassword(String oldPassword, String newPassword) {
+        User user = getCurrentUser();
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new AppException(ErrorCode.OLD_PASSWORD_INCORRECT);
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+        log.info("User {} changed password successfully and reset mustChangePassword flag.", user.getUsername());
+    }
 }

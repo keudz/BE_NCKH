@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface IUserService {
     UserSummaryResponse getMyProfile();
+    UserSummaryResponse updateMyProfile(UserUpdateRequest request);
 
     List<UserSummaryResponse> getAllUsersInMyTenant(Boolean isDeleted);
 
@@ -18,4 +19,7 @@ public interface IUserService {
     void deleteUser(Long targetUserId);
 
     void restoreUser(Long targetUserId);
+
+    void changePassword(String oldPassword, String newPassword);
+    void activateUser(String token);
 }
