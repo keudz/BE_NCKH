@@ -28,8 +28,9 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-//    private final CustomOAuth2UserService customOAuth2UserService;
-//    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    // private final CustomOAuth2UserService customOAuth2UserService;
+    // private final OAuth2AuthenticationSuccessHandler
+    // oAuth2AuthenticationSuccessHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -48,8 +49,8 @@ public class SecurityConfig {
                                 "/api/v1/tenants/public/verify",
                                 "/api/v1/tenants/public/**", // Chỉ cho phép các endpoint public của tenant
                                 "/api/v1/users/public/**",
-                                "/api/v1/agent/**"
-                        ).permitAll()
+                                "/api/v1/agent/**")
+                        .permitAll()
 
                         // 2. Swagger UI + OpenAPI docs - phải public hoàn toàn
                         .requestMatchers(
@@ -62,17 +63,16 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/verify-zalo").permitAll()
 
                         // 3. Tất cả các endpoint còn lại → phải đăng nhập + token hợp lệ
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
 
-//                .oauth2Login(oauth2 -> oauth2
-//                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-//                        .successHandler(oAuth2AuthenticationSuccessHandler)
-//                        .failureHandler((request, response, exception) -> {
-//                            // Nếu lỗi, đá về trang login của Frontend kèm thông báo lỗi
-//                            response.sendRedirect(
-//                                    "https://mystictarots.xyz/login?error=" + exception.getLocalizedMessage());
-//                        }))
+                // .oauth2Login(oauth2 -> oauth2
+                // .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                // .successHandler(oAuth2AuthenticationSuccessHandler)
+                // .failureHandler((request, response, exception) -> {
+                // // Nếu lỗi, đá về trang login của Frontend kèm thông báo lỗi
+                // response.sendRedirect(
+                // "https://mystictarots.xyz/login?error=" + exception.getLocalizedMessage());
+                // }))
 
                 // Thêm JWT filter để kiểm tra token từ cookie
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -82,9 +82,10 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setContentType("application/json;charset=UTF-8"); // Fix lỗi font
                             response.setStatus(401);
-                            response.getWriter().write("{\"status\": 401, \"message\": \"Phiên làm việc hết hạn hoặc không hợp lệ!\", \"timestamp\": " + System.currentTimeMillis() + "}");
-                        })
-                );
+                            response.getWriter().write(
+                                    "{\"status\": 401, \"message\": \"Phiên làm việc hết hạn hoặc không hợp lệ!\", \"timestamp\": "
+                                            + System.currentTimeMillis() + "}");
+                        }));
 
         return http.build();
     }
@@ -103,7 +104,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(List.of("http://localhost:3000", "http://localhost:5173",
-                "http://192.168.31.57:[*]","zbrowser://h5.cloud.zalo.me","https://h5.zdn.vn","https://be-zma.fly.dev","https://fe-zma-admin.vercel.app/,","https://businesmanager-git-main-trannhatthachs-projects.vercel.app")); // React, Vue...
+                "http://192.168.31.57:[*]", "zbrowser://h5.cloud.zalo.me", "https://h5.zdn.vn",
+                "https://be-zma.fly.dev", "https://fe-zma-admin.vercel.app", "https://businesmanager.vercel.app", "https://*.vercel.app")); // React, Vue...
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true); // quan trọng để cookie được gửi
