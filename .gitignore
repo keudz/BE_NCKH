@@ -49,7 +49,7 @@ logs/
 temp/
 tmp/
 .DS_Store### Docker ###
-Dockerfile
+
 docker-compose.yml
 ai_agent_service/Dockerfile
 ai_service/Dockerfile
