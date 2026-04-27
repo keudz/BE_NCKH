@@ -21,4 +21,5 @@ public interface IUserService {
     void restoreUser(Long targetUserId);
 
     void changePassword(String oldPassword, String newPassword);
+    void activateUser(String token);
 }

@@ -11,6 +11,7 @@ import com.example.bezma.entity.user.User;
 import com.example.bezma.repository.RoleRepository;
 import com.example.bezma.repository.UserRepository;
 import com.example.bezma.service.iService.IUserService;
+import com.example.bezma.util.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,7 +19,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +33,7 @@ public class UserServiceImpl implements IUserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     private User getCurrentUser() {
         String identifier = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -37,10 +43,22 @@ public class UserServiceImpl implements IUserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 6; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.append("@").toString();
+    }
+
     @Override
     @Transactional
     public UserSummaryResponse createUser(UserCreateRequest request) {
         User admin = getCurrentUser();
+
+        log.info("Creating new user with email: {}", request.getEmail());
 
         if (userRepository.findByPhone(request.getPhone()).isPresent()) {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
@@ -55,31 +73,66 @@ public class UserServiceImpl implements IUserService {
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
 
+        // Dùng UUID làm mật khẩu tạm thời để tránh null
+        String tempPassword = UUID.randomUUID().toString();
+        
         User newUser = User.builder()
                 .username(request.getPhone())
                 .phone(request.getPhone())
                 .fullName(request.getFullName())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(tempPassword))
                 .role(role)
                 .tenant(admin.getTenant())
-                .isActive(true)
-                .status(UserStatus.ACTIVE)
+                .isActive(false)
+                .status(UserStatus.PENDING_ACTIVE)
+                .verificationToken(UUID.randomUUID().toString())
+                .verificationTokenExpiry(LocalDateTime.now().plusDays(7))
+                .gender(request.getGender())
+                .address(request.getAddress())
+                .identityCard(request.getIdentityCard())
+                .mustChangePassword(true)
                 .build();
+
+        if (request.getBirthday() != null && !request.getBirthday().isEmpty()) {
+            try {
+                newUser.setBirthday(LocalDateTime.parse(request.getBirthday() + "T00:00:00"));
+            } catch (Exception e) {
+                log.warn("Invalid birthday format: {}", request.getBirthday());
+            }
+        }
 
         newUser.setIsDeleted(false);
         userRepository.save(newUser);
 
-        return UserSummaryResponse.builder()
-                .id(newUser.getId())
-                .username(newUser.getUsername())
-                .fullName(newUser.getFullName())
-                .email(newUser.getEmail())
-                .phone(newUser.getPhone())
-                .isActive(newUser.getIsActive())
-                .roleName(role.getName())
-                .tenantId(admin.getTenant().getId())
-                .build();
+        // Gửi email mời
+        emailService.sendEmployeeInvitation(newUser.getEmail(), newUser.getFullName(), newUser.getVerificationToken());
+
+        return mapToResponse(newUser);
+    }
+
+    @Override
+    @Transactional
+    public void activateUser(String token) {
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_TOKEN));
+
+        if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.TOKEN_EXPIRED);
+        }
+
+        String rawPassword = generateRandomPassword();
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setIsActive(true);
+        user.setIsVerified(true);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+        
+        userRepository.save(user);
+
+        // Gửi email mật khẩu
+        emailService.sendEmployeeCredentials(user.getEmail(), user.getFullName(), user.getUsername(), rawPassword);
     }
 
     @Override
@@ -90,46 +143,16 @@ public class UserServiceImpl implements IUserService {
             throw new AppException(ErrorCode.USER_NOT_ACTIVE);
         }
 
-        return UserSummaryResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .avatar(user.getAvatar())
-                .isActive(user.getIsActive())
-                .roleName(user.getRole() != null ? user.getRole().getName() : null)
-                .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
-                .mustChangePassword(user.getMustChangePassword())
-                .build();
+        return mapToResponse(user);
     }
 
     @Override
     @Transactional
     public UserSummaryResponse updateMyProfile(UserUpdateRequest request) {
         User user = getCurrentUser();
-
-        if (request.getFullName() != null) {
-            user.setFullName(request.getFullName());
-        }
-
-        if (request.getAvatar() != null) {
-            user.setAvatar(request.getAvatar());
-        }
-
+        updateUserDetails(user, request);
         userRepository.save(user);
-
-        return UserSummaryResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .avatar(user.getAvatar())
-                .isActive(user.getIsActive())
-                .roleName(user.getRole() != null ? user.getRole().getName() : null)
-                .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
-                .build();
+        return mapToResponse(user);
     }
 
     @Override
@@ -140,28 +163,13 @@ public class UserServiceImpl implements IUserService {
         Boolean filterDeleted = (isDeleted != null) ? isDeleted : false;
         List<User> users = userRepository.findAllByTenantIdAndIsDeleted(myTenantId, filterDeleted);
 
-        return users.stream().map(user -> UserSummaryResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .avatar(user.getAvatar())
-                .isActive(user.getIsActive())
-                .isDeleted(user.getIsDeleted())
-                .roleName(user.getRole() != null ? user.getRole().getName() : null)
-                .tenantId(myTenantId)
-                .build()).toList();
+        return users.stream().map(this::mapToResponse).toList();
     }
 
     @Override
     @Transactional
     public UserSummaryResponse updateUser(Long pathId, UserUpdateRequest request) {
         Long targetUserId = (pathId != null) ? pathId : request.getId();
-        if (targetUserId == null) {
-            throw new AppException(ErrorCode.INVALID_MESSAGE);
-        }
-
         User admin = getCurrentUser();
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -170,41 +178,60 @@ public class UserServiceImpl implements IUserService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        if (request.getFullName() != null) {
-            targetUser.setFullName(request.getFullName());
+        updateUserDetails(targetUser, request);
+        userRepository.save(targetUser);
+
+        return mapToResponse(targetUser);
+    }
+
+    private void updateUserDetails(User user, UserUpdateRequest request) {
+        if (request.getFullName() != null) user.setFullName(request.getFullName());
+        if (request.getAvatar() != null) user.setAvatar(request.getAvatar());
+        if (request.getGender() != null) user.setGender(request.getGender());
+        if (request.getAddress() != null) user.setAddress(request.getAddress());
+        if (request.getIdentityCard() != null) user.setIdentityCard(request.getIdentityCard());
+        
+        if (request.getBirthday() != null && !request.getBirthday().isEmpty()) {
+            try {
+                user.setBirthday(LocalDateTime.parse(request.getBirthday() + "T00:00:00"));
+            } catch (Exception e) {
+                log.warn("Invalid birthday format: {}", request.getBirthday());
+            }
         }
 
-        if (request.getAvatar() != null) {
-            targetUser.setAvatar(request.getAvatar());
-        }
-
-        if (request.getPhone() != null && !request.getPhone().equals(targetUser.getPhone())) {
+        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone())) {
             if (userRepository.findByPhone(request.getPhone()).isPresent()) {
                 throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
             }
-            targetUser.setPhone(request.getPhone());
-            targetUser.setUsername(request.getPhone());
+            user.setPhone(request.getPhone());
+            user.setUsername(request.getPhone());
         }
 
-        if (request.getEmail() != null && !request.getEmail().equals(targetUser.getEmail())) {
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.findByEmail(request.getEmail()).isPresent()) {
                 throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
             }
-            targetUser.setEmail(request.getEmail());
+            user.setEmail(request.getEmail());
         }
+    }
 
-        userRepository.save(targetUser);
-
+    private UserSummaryResponse mapToResponse(User user) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         return UserSummaryResponse.builder()
-                .id(targetUser.getId())
-                .username(targetUser.getUsername())
-                .fullName(targetUser.getFullName())
-                .email(targetUser.getEmail())
-                .phone(targetUser.getPhone())
-                .avatar(targetUser.getAvatar())
-                .isActive(targetUser.getIsActive())
-                .roleName(targetUser.getRole() != null ? targetUser.getRole().getName() : null)
-                .tenantId(targetUser.getTenant() != null ? targetUser.getTenant().getId() : null)
+                .id(user.getId())
+                .username(user.getUsername())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .avatar(user.getAvatar())
+                .isActive(user.getIsActive())
+                .roleName(user.getRole() != null ? user.getRole().getName() : null)
+                .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
+                .birthday(user.getBirthday() != null ? user.getBirthday().format(formatter) : null)
+                .gender(user.getGender())
+                .address(user.getAddress())
+                .identityCard(user.getIdentityCard())
+                .mustChangePassword(user.getMustChangePassword())
                 .build();
     }
 

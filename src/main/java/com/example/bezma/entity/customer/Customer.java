@@ -35,6 +35,12 @@ public class Customer {
     @Column(name = "email")
     private String email;
 
+    @Column(name = "tax_code")
+    private String taxCode;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;

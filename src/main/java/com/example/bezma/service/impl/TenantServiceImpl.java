@@ -93,6 +93,9 @@ public class TenantServiceImpl implements ITenantService {
         if (userRepository.existsByEmail(request.getAdminEmail())) {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
         }
+        if (tenantRepository.existsByEmail(request.getEmail())) {
+            throw new AppException(ErrorCode.USER_ALREADY_EXISTS); // Hoặc tạo ErrorCode mới nếu muốn
+        }
 
         // 2. Tìm Role TENANT_ADMIN (Ưu tiên) hoặc ADMIN
         Role adminRole = roleRepository.findByName("TENANT_ADMIN")
@@ -111,8 +114,14 @@ public class TenantServiceImpl implements ITenantService {
 
         tenant = tenantRepository.save(tenant);
 
-        // 4. Tạo Mật khẩu tạm thời ngẫu nhiên (10 ký tự)
-        String tempPassword = UUID.randomUUID().toString().substring(0, 10);
+        // 4. Tạo Mật khẩu tạm thời (6 ký tự CHỮ HOA/SỐ + đuôi @)
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder sb = new StringBuilder();
+        java.util.Random random = new java.util.Random();
+        for (int i = 0; i < 6; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        String tempPassword = sb.toString() + "@";
 
         // 5. Tạo User Admin (Chủ sở hữu Tenant)
         User admin = User.builder()

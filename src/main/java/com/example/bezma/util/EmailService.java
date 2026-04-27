@@ -92,6 +92,50 @@ public class EmailService {
         sendHtmlEmail(to, subject, content);
     }
 
+    @Async
+    public void sendEmployeeInvitation(String to, String fullName, String token) {
+        String activationUrl = String.format("%s/api/v1/users/public/activate?token=%s", baseUrl, token);
+        String subject = "[LaptopHN POS] Lời mời gia nhập đội ngũ";
+        
+        String content = String.format("""
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+                <h2 style="color: #1e40af; margin-bottom: 20px;">Chào mừng %s!</h2>
+                <p style="color: #475569; line-height: 1.6;">Bạn đã được mời tham gia hệ thống quản trị <strong>LaptopHN POS</strong>. Vui lòng nhấn nút bên dưới để xác nhận và kích hoạt tài khoản nhân viên của bạn.</p>
+                <div style="text-align: center; margin: 35px 0;">
+                    <a href="%s" style="background: linear-gradient(135deg, #1e40af 0%%, #2563eb 100%%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: bold; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">Xác nhận gia nhập</a>
+                </div>
+                <p style="color: #64748b; font-size: 13px;">Sau khi xác nhận, chúng tôi sẽ gửi mật khẩu đăng nhập vào email này cho bạn.</p>
+                <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0;">
+                <p style="color: #94a3b8; font-size: 12px; text-align: center;">Trân trọng,<br>Ban quản trị LaptopHN POS</p>
+            </div>
+            """, fullName, activationUrl);
+
+        sendHtmlEmail(to, subject, content);
+    }
+
+    @Async
+    public void sendEmployeeCredentials(String to, String fullName, String username, String password) {
+        String loginUrl = frontendUrl + "/login";
+        String subject = "[LaptopHN POS] Tài khoản nhân viên của bạn";
+
+        String content = String.format("""
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+                <h2 style="color: #10b981; margin-bottom: 20px;">Kích hoạt thành công!</h2>
+                <p style="color: #475569;">Chào <strong>%s</strong>, tài khoản của bạn đã sẵn sàng. Dưới đây là thông tin đăng nhập:</p>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin: 25px 0; border: 1px solid #f1f5f9;">
+                    <p style="margin: 0 0 10px 0;"><strong>Tên đăng nhập:</strong> <span style="color: #1e40af;">%s</span></p>
+                    <p style="margin: 0;"><strong>Mật khẩu:</strong> <span style="color: #1e40af;">%s</span></p>
+                </div>
+                <div style="text-align: center; margin: 35px 0;">
+                    <a href="%s" style="background: #10b981; color: white; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: bold;">Đăng nhập ngay</a>
+                </div>
+                <p style="color: #f43f5e; font-size: 13px; font-weight: 500;">Vì lý do bảo mật, bạn hãy đổi mật khẩu ngay sau lần đầu đăng nhập thành công.</p>
+            </div>
+            """, fullName, username, password, loginUrl);
+
+        sendHtmlEmail(to, subject, content);
+    }
+
     private void sendHtmlEmail(String to, String subject, String content) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

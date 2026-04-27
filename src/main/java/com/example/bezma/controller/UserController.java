@@ -93,4 +93,11 @@ public class UserController {
                 .message("Khôi phục nhân viên thành công!")
                 .build();
     }
+
+    @Operation(summary = "Kích hoạt tài khoản nhân viên qua Email")
+    @GetMapping("/public/activate")
+    public String activateUser(@RequestParam("token") String token) {
+        userService.activateUser(token);
+        return "Tài khoản của bạn đã được kích hoạt thành công! Vui lòng kiểm tra email để nhận mật khẩu đăng nhập.";
+    }
 }

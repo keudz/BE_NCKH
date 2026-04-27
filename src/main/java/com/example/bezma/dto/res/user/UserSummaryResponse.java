@@ -19,4 +19,8 @@ public class UserSummaryResponse {
     private String avatar;
     private Boolean isFaceRegistered;
     private Boolean mustChangePassword;
+    private String birthday;
+    private String gender;
+    private String address;
+    private String identityCard;
 }

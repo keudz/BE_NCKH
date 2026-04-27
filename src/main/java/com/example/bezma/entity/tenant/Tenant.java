@@ -37,7 +37,7 @@ public class Tenant extends BaseEntity {
 
     @Column(name = "slug", unique = true, nullable = false, length = 100)
     private String slug; // Phục vụ SEO
-    @Column(name = "phone", nullable = false, length = 10)
+    @Column(name = "phone", nullable = false, length = 20)
     private String phone;
 
     @Column(name = "domain", unique = true, length = 100)

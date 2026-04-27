@@ -56,6 +56,18 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "avatar_url")
     private String avatar;
 
+    @Column(name = "birthday")
+    private LocalDateTime birthday;
+
+    @Column(name = "gender", length = 10)
+    private String gender;
+
+    @Column(name = "address")
+    private String address;
+
+    @Column(name = "identity_card", length = 20)
+    private String identityCard;
+
     // --- Quan hệ cốt lõi ---
 
     @ManyToOne(fetch = FetchType.LAZY)

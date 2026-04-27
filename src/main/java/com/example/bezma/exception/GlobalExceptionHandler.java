@@ -10,8 +10,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import lombok.extern.slf4j.Slf4j;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
         @ExceptionHandler(value = AppException.class)
@@ -58,6 +60,7 @@ public class GlobalExceptionHandler {
         // public ResponseEntity<ApiResponse<?>> handleRuntimeException(RuntimeException
         // exception)
         public ResponseEntity<ApiResponse<?>> handleRuntimeException(Exception exception) {
+                log.error("Uncategorized Exception: ", exception);
                 ApiResponse<?> apiResponse = ApiResponse.builder()
                                 .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
                                 .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage())
