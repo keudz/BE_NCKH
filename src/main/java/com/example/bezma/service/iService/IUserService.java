@@ -3,6 +3,7 @@ package com.example.bezma.service.iService;
 import com.example.bezma.dto.req.user.UserCreateRequest;
 import com.example.bezma.dto.req.user.UserUpdateRequest;
 import com.example.bezma.dto.res.user.UserSummaryResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -22,4 +23,6 @@ public interface IUserService {
 
     void changePassword(String oldPassword, String newPassword);
     void activateUser(String token);
+    
+    UserSummaryResponse updateAvatar(MultipartFile file);
 }

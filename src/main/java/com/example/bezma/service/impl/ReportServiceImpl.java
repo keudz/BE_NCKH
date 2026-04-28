@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -69,7 +68,7 @@ public class ReportServiceImpl {
         List<User> allEmployees = userRepository.findAllByTenantIdAndIsDeleted(tenantId, false);
         long totalEmployees = allEmployees.size();
         List<Object[]> statsResult = taskRepository.getEmployeeTaskStats(tenantId);
-        
+
         // Tạo map để tra cứu stats theo userId
         Map<Long, Object[]> statsMap = new HashMap<>();
         for (Object[] row : statsResult) {

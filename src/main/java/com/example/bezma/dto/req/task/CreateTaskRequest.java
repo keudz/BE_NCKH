@@ -14,6 +14,7 @@ public class CreateTaskRequest {
     private Long assigneeId;
     private Long tenantId;
     private Long customerId;
+    private Long projectId;
 
     // Customer Info
     private String customerName;

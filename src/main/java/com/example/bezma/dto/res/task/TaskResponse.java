@@ -43,6 +43,10 @@ public class TaskResponse {
     private String phoneNumber;
     private BigDecimal estimatedPrice;
 
+    // ── Project ──
+    private Long projectId;
+    private String projectName;
+
     // ── Computed ──
     private Long durationMinutes; // Thời gian thực hiện (phút) = completionTime - checkInTime
 }
