@@ -150,4 +150,27 @@ public class EmailService {
             log.error("Gửi email thất bại tới {}: {}", to, e.getMessage());
         }
     }
+
+    /**
+     * Gửi mã OTP đặt lại mật khẩu cho người dùng
+     */
+    @Async
+    public void sendPasswordResetEmail(String to, String otp) {
+        String subject = "[LaptopHN POS] Mã OTP đặt lại mật khẩu";
+        
+        String content = String.format("""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                <h2 style="color: #ea580c;">Yêu cầu đặt lại mật khẩu</h2>
+                <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản của mình. Dưới đây là mã xác thực OTP của bạn:</p>
+                <div style="background: #fff7ed; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; border: 1px dashed #fdba74;">
+                    <span style="font-size: 32px; font-weight: bold; color: #ea580c; letter-spacing: 5px;">%s</span>
+                </div>
+                <p style="color: #666; font-size: 14px;">Mã này có hiệu lực trong 10 phút. Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
+                <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0;">
+                <p style="color: #94a3b8; font-size: 12px; text-align: center;">Trân trọng,<br>Ban quản trị LaptopHN POS</p>
+            </div>
+            """, otp);
+
+        sendHtmlEmail(to, subject, content);
+    }
 }

@@ -85,4 +85,22 @@ public class AuthController {
                 .message("Đăng nhập Zalo thành công!")
                 .build();
     }
+
+    @Operation(summary = "Yêu cầu quên mật khẩu (Gửi OTP qua email)")
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@RequestBody @Valid com.example.bezma.dto.req.auth.ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ApiResponse.<Void>builder()
+                .message("Mã OTP đã được gửi đến email của bạn!")
+                .build();
+    }
+
+    @Operation(summary = "Đặt lại mật khẩu với OTP")
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@RequestBody @Valid com.example.bezma.dto.req.auth.ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ApiResponse.<Void>builder()
+                .message("Đặt lại mật khẩu thành công!")
+                .build();
+    }
 }

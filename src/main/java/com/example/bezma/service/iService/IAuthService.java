@@ -12,4 +12,7 @@ public interface IAuthService {
     
     void requestTwoStepReset(String emailOrPhone);
     void confirmTwoStepReset(String emailOrPhone, String companyOtp, String adminOtp, String newPassword);
+    
+    void forgotPassword(com.example.bezma.dto.req.auth.ForgotPasswordRequest request);
+    void resetPassword(com.example.bezma.dto.req.auth.ResetPasswordRequest request);
 }

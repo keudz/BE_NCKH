@@ -38,6 +38,7 @@ public enum ErrorCode {
     USER_NOT_EXISTED(1014, "Người dùng không tồn tại trong hệ thống", HttpStatus.NOT_FOUND),
     USER_ALREADY_EMPLOYEE(1015, "Người dùng này đã là nhân viên", HttpStatus.BAD_REQUEST),
     INVALID_INPUT(1014, "Username hoặc password không hợp lệ", HttpStatus.BAD_REQUEST),
+    PASSWORD_NOT_MATCH(1016, "Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST),
 
     // --- 6. Nhóm AI & Attendance Errors ---
     FACE_NOT_DETECTED(6001, "Không tìm thấy khuôn mặt trong ảnh. Vui lòng chụp rõ mặt.", HttpStatus.BAD_REQUEST),

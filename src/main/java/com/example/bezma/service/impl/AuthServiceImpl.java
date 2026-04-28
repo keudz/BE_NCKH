@@ -235,4 +235,44 @@ public class AuthServiceImpl implements IAuthService {
         redisTemplate.delete(keyComp);
         redisTemplate.delete(keyAdmin);
     }
+
+    @Override
+    public void forgotPassword(com.example.bezma.dto.req.auth.ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        String otp = String.valueOf((int) (Math.random() * 900000) + 100000);
+        String key = "password_reset:otp:" + user.getEmail();
+        redisTemplate.opsForValue().set(key, otp, 10, java.util.concurrent.TimeUnit.MINUTES);
+
+        emailService.sendPasswordResetEmail(user.getEmail(), otp);
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(com.example.bezma.dto.req.auth.ResetPasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new AppException(ErrorCode.PASSWORD_NOT_MATCH);
+        }
+
+        String key = "password_reset:otp:" + request.getEmail();
+        Object cachedOtp = redisTemplate.opsForValue().get(key);
+
+        if (cachedOtp == null) {
+            throw new AppException(ErrorCode.TOKEN_EXPIRED);
+        }
+
+        if (!cachedOtp.toString().equals(request.getOtp())) {
+            throw new AppException(ErrorCode.INVALID_KEY);
+        }
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+
+        redisTemplate.delete(key);
+    }
 }
