@@ -13,4 +13,9 @@ public interface ITaskService {
     TaskResponse updateTask(Long taskId, CreateTaskRequest request);
     String uploadReport(Long taskId, org.springframework.web.multipart.MultipartFile[] images);
     void deleteTask(Long taskId);
+
+    // Review & Approval
+    TaskResponse approveTask(Long taskId, Long adminId, String note);
+    TaskResponse rejectTask(Long taskId, Long adminId, String reason);
+    List<TaskResponse> getPendingReviewTasks(Long tenantId);
 }

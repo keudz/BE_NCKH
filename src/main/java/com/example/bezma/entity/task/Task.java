@@ -32,12 +32,19 @@ public class Task {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(length = 20)
     private String priority; // HIGH, MEDIUM, LOW
 
+    @Column(length = 50)
     private String category; // MARKETING, TECHNICAL, DESIGN, etc.
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 20)
     private TaskStatus status;
+
+    @Column(name = "require_photo")
+    @Builder.Default
+    private Boolean requirePhoto = false; // Mặc định: KHÔNG bắt buộc
 
     private LocalDateTime dueDate;
 
@@ -63,7 +70,7 @@ public class Task {
     @Column(name = "check_in_longitude", precision = 10, scale = 7)
     private BigDecimal checkInLongitude;
 
-    @Column(name = "check_in_photo")
+    @Column(name = "check_in_photo", length = 500)
     private String checkInPhoto; // URL ảnh hiện trường khi bắt đầu
 
     @Column(name = "check_in_note", columnDefinition = "TEXT")
@@ -71,7 +78,7 @@ public class Task {
 
     // ── COMPLETION: Hoàn thành công việc ──
 
-    @Column(name = "completion_photo")
+    @Column(name = "completion_photo", length = 500)
     private String completionPhoto; // URL ảnh khi hoàn thành
 
     @Column(name = "completion_time")
@@ -79,6 +86,15 @@ public class Task {
 
     @Column(name = "result_note", columnDefinition = "TEXT")
     private String resultNote; // Ghi chú kết quả công việc
+
+    @Column(name = "review_note", columnDefinition = "TEXT")
+    private String reviewNote; // Ghi chú của Admin khi duyệt/từ chối
+
+    @Column(name = "reviewed_by")
+    private Long reviewedBy; // ID của Admin đã duyệt
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt; // Thời điểm duyệt
 
     @Column(name = "customer_confirmed")
     @Builder.Default
