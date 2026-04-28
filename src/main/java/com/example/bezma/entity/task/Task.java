@@ -84,6 +84,11 @@ public class Task {
     @Builder.Default
     private Boolean customerConfirmed = false; // Xác nhận của khách hàng
 
+    // ── Project ──
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private com.example.bezma.entity.project.Project project;
+
     // ── Customer Info ──
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")

@@ -22,126 +22,135 @@ import java.util.List;
 @Tag(name = "Task Management", description = "Quản lý công việc và quy trình check-in/hoàn thành")
 public class TaskController {
 
-    private final TaskServiceImpl taskService;
+        private final TaskServiceImpl taskService;
 
-    // ==========================================
-    // NHÓM 1: QUERY (Lấy danh sách)
-    // ==========================================
+        @Operation(summary = "Lấy danh sách task của tôi")
+        @GetMapping("/my-tasks")
+        public ApiResponse<List<TaskResponse>> getMyTasks(@AuthenticationPrincipal User currentUser) {
+                return ApiResponse.<List<TaskResponse>>builder()
+                                .data(taskService.getMyTasks(currentUser.getId()))
+                                .message("Lấy danh sách task thành công!")
+                                .build();
+        }
 
-    @Operation(summary = "Lấy danh sách task của tôi")
-    @GetMapping("/my-tasks")
-    public ApiResponse<List<TaskResponse>> getMyTasks(@AuthenticationPrincipal User currentUser) {
-        return ApiResponse.<List<TaskResponse>>builder()
-                .data(taskService.getMyTasks(currentUser.getId()))
-                .message("Lấy danh sách task thành công!")
-                .build();
-    }
+        @Operation(summary = "Lấy tất cả task của dự án")
+        @GetMapping("/project/{projectId}")
+        public ApiResponse<List<TaskResponse>> getTasksByProject(@PathVariable Long projectId) {
+                return ApiResponse.<List<TaskResponse>>builder()
+                                .data(taskService.getTasksByProject(projectId))
+                                .build();
+        }
 
-    @Operation(summary = "Lấy tất cả task của doanh nghiệp (Admin)")
-    @GetMapping("/tenant/{tenantId}")
-    public ApiResponse<List<TaskResponse>> getTasksByTenant(@PathVariable Long tenantId) {
-        return ApiResponse.<List<TaskResponse>>builder()
-                .data(taskService.getTasksByTenant(tenantId))
-                .build();
-    }
+        @Operation(summary = "Lấy tất cả task của doanh nghiệp")
+        @GetMapping("/tenant/{tenantId}")
+        public ApiResponse<List<TaskResponse>> getTasksByTenant(@PathVariable Long tenantId) {
+                return ApiResponse.<List<TaskResponse>>builder()
+                                .data(taskService.getTasksByTenant(tenantId))
+                                .message("Lấy danh sách task doanh nghiệp thành công!")
+                                .build();
+        }
 
-    @Operation(summary = "Lấy task chưa giao cho ai (Nhân viên tự nhận)")
-    @GetMapping("/unassigned")
-    public ApiResponse<List<TaskResponse>> getUnassignedTasks(@AuthenticationPrincipal User currentUser) {
-        return ApiResponse.<List<TaskResponse>>builder()
-                .data(taskService.getUnassignedTasks(currentUser.getTenant().getId()))
-                .message("Lấy task chưa giao thành công!")
-                .build();
-    }
+        @Operation(summary = "Lấy task chưa giao cho ai (Nhân viên tự nhận)")
+        @GetMapping("/unassigned")
+        public ApiResponse<List<TaskResponse>> getUnassignedTasks(@AuthenticationPrincipal User currentUser) {
+                return ApiResponse.<List<TaskResponse>>builder()
+                                .data(taskService.getUnassignedTasks(currentUser.getTenant().getId()))
+                                .message("Lấy task chưa giao thành công!")
+                                .build();
+        }
 
-    // ==========================================
-    // NHÓM 2: MUTATIONS (Tạo, cập nhật)
-    // ==========================================
+        @Operation(summary = "Tạo task mới")
+        @PostMapping
+        public ApiResponse<TaskResponse> createTask(
+                        @RequestBody CreateTaskRequest request,
+                        @AuthenticationPrincipal User currentUser) {
+                request.setTenantId(currentUser.getTenant().getId());
+                return ApiResponse.<TaskResponse>builder()
+                                .data(taskService.createTask(request))
+                                .message("Tạo task thành công!")
+                                .build();
+        }
 
-    @Operation(summary = "Tạo task mới")
-    @PostMapping
-    public ApiResponse<TaskResponse> createTask(
-            @RequestBody CreateTaskRequest request,
-            @AuthenticationPrincipal User currentUser) {
-        request.setTenantId(currentUser.getTenant().getId());
-        return ApiResponse.<TaskResponse>builder()
-                .data(taskService.createTask(request))
-                .message("Tạo task thành công!")
-                .build();
-    }
+        @Operation(summary = "Cập nhật thông tin task")
+        @PutMapping("/{taskId}")
+        public ApiResponse<TaskResponse> updateTask(
+                        @PathVariable Long taskId,
+                        @RequestBody CreateTaskRequest request) {
+                return ApiResponse.<TaskResponse>builder()
+                                .data(taskService.updateTask(taskId, request))
+                                .message("Cập nhật task thành công!")
+                                .build();
+        }
 
-    @Operation(summary = "Cập nhật trạng thái task")
-    @PutMapping("/{taskId}/status")
-    public ApiResponse<TaskResponse> updateStatus(
-            @PathVariable Long taskId,
-            @RequestBody java.util.Map<String, String> body) {
-        return ApiResponse.<TaskResponse>builder()
-                .data(taskService.updateTaskStatus(taskId, body.get("status")))
-                .build();
-    }
+        @Operation(summary = "Cập nhật trạng thái task")
+        @PutMapping("/{taskId}/status")
+        public ApiResponse<TaskResponse> updateStatus(
+                        @PathVariable Long taskId,
+                        @RequestBody java.util.Map<String, String> body) {
+                return ApiResponse.<TaskResponse>builder()
+                                .data(taskService.updateTaskStatus(taskId, body.get("status")))
+                                .build();
+        }
 
-    @Operation(summary = "Nhận task chưa giao (Nhân viên tự nhận)")
-    @PostMapping("/{taskId}/claim")
-    public ApiResponse<TaskResponse> claimTask(
-            @PathVariable Long taskId,
-            @AuthenticationPrincipal User currentUser) {
-        return ApiResponse.<TaskResponse>builder()
-                .data(taskService.claimTask(taskId, currentUser.getId()))
-                .message("Nhận task thành công! Bạn có thể bắt đầu thực hiện.")
-                .build();
-    }
+        @Operation(summary = "Nhận task chưa giao (Nhân viên tự nhận)")
+        @PostMapping("/{taskId}/claim")
+        public ApiResponse<TaskResponse> claimTask(
+                        @PathVariable Long taskId,
+                        @AuthenticationPrincipal User currentUser) {
+                return ApiResponse.<TaskResponse>builder()
+                                .data(taskService.claimTask(taskId, currentUser.getId()))
+                                .message("Nhận task thành công! Bạn có thể bắt đầu thực hiện.")
+                                .build();
+        }
 
-    @Operation(summary = "Xóa task (Chỉ Admin hoặc người tạo)")
-    @DeleteMapping("/{taskId}")
-    public ApiResponse<Void> deleteTask(@PathVariable Long taskId) {
-        taskService.deleteTask(taskId);
-        return ApiResponse.<Void>builder()
-                .message("Xóa công việc thành công!")
-                .build();
-    }
+        @Operation(summary = "Xóa task (Chỉ Admin hoặc người tạo)")
+        @DeleteMapping("/{taskId}")
+        public ApiResponse<Void> deleteTask(@PathVariable Long taskId) {
+                taskService.deleteTask(taskId);
+                return ApiResponse.<Void>builder()
+                                .message("Xóa công việc thành công!")
+                                .build();
+        }
 
-    // ==========================================
-    // NHÓM 3: TASK WORKFLOW (Check-in → Complete)
-    // ==========================================
+        @Operation(summary = "Check-in tại hiện trường (GPS + ảnh + ghi chú)")
+        @PostMapping(value = "/{taskId}/check-in", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        public ApiResponse<TaskResponse> checkInTask(
+                        @PathVariable Long taskId,
+                        @AuthenticationPrincipal User currentUser,
+                        @RequestParam(value = "photo", required = false) MultipartFile photo,
+                        @RequestParam("lat") BigDecimal lat,
+                        @RequestParam("lon") BigDecimal lon,
+                        @RequestParam(value = "note", required = false) String note) {
 
-    @Operation(summary = "Check-in tại hiện trường (GPS + ảnh + ghi chú)")
-    @PostMapping(value = "/{taskId}/check-in", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<TaskResponse> checkInTask(
-            @PathVariable Long taskId,
-            @AuthenticationPrincipal User currentUser,
-            @RequestParam(value = "photo", required = false) MultipartFile photo,
-            @RequestParam("lat") BigDecimal lat,
-            @RequestParam("lon") BigDecimal lon,
-            @RequestParam(value = "note", required = false) String note) {
+                return ApiResponse.<TaskResponse>builder()
+                                .data(taskService.checkInTask(taskId, currentUser.getId(), photo, lat, lon, note))
+                                .message("Check-in thành công! Bắt đầu thực hiện công việc.")
+                                .build();
+        }
 
-        return ApiResponse.<TaskResponse>builder()
-                .data(taskService.checkInTask(taskId, currentUser.getId(), photo, lat, lon, note))
-                .message("Check-in thành công! Bắt đầu thực hiện công việc.")
-                .build();
-    }
+        @Operation(summary = "Hoàn thành task (ảnh hoàn thành + kết quả + xác nhận khách)")
+        @PostMapping(value = "/{taskId}/complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        public ApiResponse<TaskResponse> completeTask(
+                        @PathVariable Long taskId,
+                        @AuthenticationPrincipal User currentUser,
+                        @RequestParam(value = "photo", required = false) MultipartFile photo,
+                        @RequestParam(value = "resultNote", required = false) String resultNote,
+                        @RequestParam(value = "customerConfirmed", required = false) Boolean customerConfirmed) {
 
-    @Operation(summary = "Hoàn thành task (ảnh hoàn thành + kết quả + xác nhận khách)")
-    @PostMapping(value = "/{taskId}/complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<TaskResponse> completeTask(
-            @PathVariable Long taskId,
-            @AuthenticationPrincipal User currentUser,
-            @RequestParam(value = "photo", required = false) MultipartFile photo,
-            @RequestParam(value = "resultNote", required = false) String resultNote,
-            @RequestParam(value = "customerConfirmed", required = false) Boolean customerConfirmed) {
+                return ApiResponse.<TaskResponse>builder()
+                                .data(taskService.completeTask(taskId, currentUser.getId(), photo, resultNote,
+                                                customerConfirmed))
+                                .message("Nộp báo cáo hoàn thành! Đang chờ Admin phê duyệt.")
+                                .build();
+        }
 
-        return ApiResponse.<TaskResponse>builder()
-                .data(taskService.completeTask(taskId, currentUser.getId(), photo, resultNote, customerConfirmed))
-                .message("Nộp báo cáo hoàn thành! Đang chờ Admin phê duyệt.")
-                .build();
-    }
-
-    @Operation(summary = "Upload báo cáo ảnh cho task")
-    @PostMapping(value = "/{taskId}/report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<String> uploadReport(
-            @PathVariable Long taskId,
-            @RequestParam("images") MultipartFile[] images) {
-        return ApiResponse.<String>builder()
-                .data(taskService.uploadReport(taskId, images))
-                .build();
-    }
+        @Operation(summary = "Upload báo cáo ảnh cho task")
+        @PostMapping(value = "/{taskId}/report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        public ApiResponse<String> uploadReport(
+                        @PathVariable Long taskId,
+                        @RequestParam("images") MultipartFile[] images) {
+                return ApiResponse.<String>builder()
+                                .data(taskService.uploadReport(taskId, images))
+                                .build();
+        }
 }

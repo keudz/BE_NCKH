@@ -122,6 +122,7 @@ public class Tenant extends BaseEntity {
     private Double allowedRadius = 200.0; // Bán kính cho phép điểm danh (mét), mặc định 200m
 
     // --- Relationships ---
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<User> users;
 }

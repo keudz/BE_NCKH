@@ -4,6 +4,7 @@ import com.example.bezma.common.enumCom.ErrorCode;
 import com.example.bezma.dto.req.task.CreateTaskRequest;
 import com.example.bezma.dto.res.task.TaskResponse;
 import com.example.bezma.entity.notification.NotificationType;
+import com.example.bezma.entity.project.Project;
 import com.example.bezma.entity.task.Task;
 import com.example.bezma.entity.task.TaskStatus;
 import com.example.bezma.entity.tenant.Tenant;
@@ -15,14 +16,13 @@ import com.example.bezma.repository.TenantRepository;
 import com.example.bezma.repository.UserRepository;
 import com.example.bezma.service.NotificationPublisher;
 import com.example.bezma.service.iService.ITaskService;
-import com.example.bezma.util.FileUtils;
+import com.example.bezma.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -38,7 +38,9 @@ public class TaskServiceImpl implements ITaskService {
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
     private final CustomerRepository customerRepository;
+    private final com.example.bezma.repository.ProjectRepository projectRepository;
     private final NotificationPublisher notificationPublisher;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     public List<TaskResponse> getMyTasks(Long userId) {
@@ -57,6 +59,12 @@ public class TaskServiceImpl implements ITaskService {
         if (request.getAssigneeId() != null) {
             assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        }
+
+        com.example.bezma.entity.project.Project project = null;
+        if (request.getProjectId() != null) {
+            project = projectRepository.findById(request.getProjectId())
+                    .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
         }
 
         com.example.bezma.entity.customer.Customer customer = null;
@@ -97,6 +105,7 @@ public class TaskServiceImpl implements ITaskService {
                 .assignee(assignee)
                 .tenant(tenant)
                 .customer(customer)
+                .project(project)
 
                 .customerName(customer != null ? customer.getName() : request.getCustomerName())
                 .phoneNumber(customer != null ? customer.getPhoneNumber() : request.getPhoneNumber())
@@ -123,6 +132,44 @@ public class TaskServiceImpl implements ITaskService {
 
     @Override
     @Transactional
+    public TaskResponse updateTask(Long taskId, CreateTaskRequest request) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
+
+        task.setTitle(request.getTitle());
+        task.setDescription(request.getDescription());
+        task.setCategory(request.getCategory());
+        task.setPriority(request.getPriority());
+        task.setDueDate(request.getDueDate());
+
+        if (request.getAssigneeId() != null) {
+            User assignee = userRepository.findById(request.getAssigneeId())
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+            task.setAssignee(assignee);
+        } else {
+            task.setAssignee(null);
+        }
+
+        if (request.getProjectId() != null) {
+            Project project = projectRepository.findById(request.getProjectId())
+                    .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
+            task.setProject(project);
+        } else {
+            task.setProject(null);
+        }
+
+        // Cập nhật thông tin khách hàng (nếu có)
+        task.setCustomerName(request.getCustomerName());
+        task.setCompanyName(request.getCompanyName());
+        task.setAddress(request.getAddress());
+        task.setPhoneNumber(request.getPhoneNumber());
+        task.setEstimatedPrice(request.getEstimatedPrice());
+
+        return mapToResponse(taskRepository.save(task));
+    }
+
+    @Override
+    @Transactional
     public TaskResponse updateTaskStatus(Long taskId, String status) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
@@ -137,6 +184,13 @@ public class TaskServiceImpl implements ITaskService {
     @Override
     public List<TaskResponse> getTasksByTenant(Long tenantId) {
         return taskRepository.findByTenantId(tenantId).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TaskResponse> getTasksByProject(Long projectId) {
+        return taskRepository.findByProjectId(projectId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -181,8 +235,8 @@ public class TaskServiceImpl implements ITaskService {
         String photoUrl = null;
         if (photo != null && !photo.isEmpty()) {
             try {
-                photoUrl = FileUtils.saveFile("uploads/tasks/checkin", photo);
-            } catch (IOException e) {
+                photoUrl = cloudinaryService.uploadFile(photo, "tasks/checkin");
+            } catch (Exception e) {
                 log.error("Lỗi lưu ảnh check-in: {}", e.getMessage());
             }
         }
@@ -232,8 +286,8 @@ public class TaskServiceImpl implements ITaskService {
         String photoUrl = null;
         if (photo != null && !photo.isEmpty()) {
             try {
-                photoUrl = FileUtils.saveFile("uploads/tasks/completion", photo);
-            } catch (IOException e) {
+                photoUrl = cloudinaryService.uploadFile(photo, "tasks/completion");
+            } catch (Exception e) {
                 log.error("Lỗi lưu ảnh completion: {}", e.getMessage());
             }
         }
@@ -286,9 +340,9 @@ public class TaskServiceImpl implements ITaskService {
             java.util.List<String> imageUrls = new java.util.ArrayList<>();
             for (MultipartFile image : images) {
                 try {
-                    String url = FileUtils.saveFile("uploads/tasks", image);
+                    String url = cloudinaryService.uploadFile(image, "tasks");
                     imageUrls.add(url);
-                } catch (IOException e) {
+                } catch (Exception e) {
                     throw new RuntimeException("Lỗi lưu file: " + e.getMessage());
                 }
             }
@@ -346,6 +400,9 @@ public class TaskServiceImpl implements ITaskService {
                 .address(task.getAddress())
                 .companyName(task.getCompanyName())
                 .estimatedPrice(task.getEstimatedPrice())
+                // Project info
+                .projectId(task.getProject() != null ? task.getProject().getId() : null)
+                .projectName(task.getProject() != null ? task.getProject().getName() : null)
                 .build();
     }
 }
