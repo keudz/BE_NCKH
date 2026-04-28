@@ -31,7 +31,10 @@ public class Project {
     private LocalDate startDate;
     private LocalDate endDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)// vd khi chạy câu leệnh select sẽ chỉ trả ra các thông tin khác trong entity project , thuộc tính này chỉ thực sự đc lấy ra khi đc gọi hẳn hàm p.getTenant
+    @Enumerated(EnumType.STRING)
+    private ProjectStatus status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 

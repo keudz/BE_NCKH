@@ -9,14 +9,13 @@ import com.example.bezma.exception.AppException;
 import com.example.bezma.repository.InvoiceRepository;
 import com.example.bezma.repository.TenantRepository;
 import com.example.bezma.service.iService.IInvoiceService;
-import com.example.bezma.util.FileUtils;
+import com.example.bezma.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,6 +27,7 @@ public class InvoiceServiceImpl implements IInvoiceService {
 
     private final InvoiceRepository invoiceRepository;
     private final TenantRepository tenantRepository;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     @Transactional
@@ -44,8 +44,8 @@ public class InvoiceServiceImpl implements IInvoiceService {
         String photoUrl = null;
         if (file != null && !file.isEmpty()) {
             try {
-                photoUrl = FileUtils.saveFile("uploads/invoices", file);
-            } catch (IOException e) {
+                photoUrl = cloudinaryService.uploadFile(file, "invoices");
+            } catch (Exception e) {
                 log.error("Lỗi lưu ảnh hóa đơn: {}", e.getMessage());
             }
         }
@@ -56,7 +56,8 @@ public class InvoiceServiceImpl implements IInvoiceService {
                 .taxRate(rate)
                 .taxAmount(taxAmount)
                 .finalAmount(finalAmount)
-                .invoiceDate(request.getInvoiceDate() != null ? request.getInvoiceDate() : java.time.LocalDateTime.now())
+                .invoiceDate(
+                        request.getInvoiceDate() != null ? request.getInvoiceDate() : java.time.LocalDateTime.now())
                 .description(request.getDescription())
                 .type(request.getType())
                 .photoUrl(photoUrl)
@@ -78,11 +79,11 @@ public class InvoiceServiceImpl implements IInvoiceService {
     public void deleteInvoice(Long id, Long tenantId) {
         Invoice invoice = invoiceRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
-        
+
         if (!invoice.getTenant().getId().equals(tenantId)) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
-        
+
         invoiceRepository.delete(invoice);
     }
 
