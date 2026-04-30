@@ -12,6 +12,7 @@ import com.example.bezma.service.iService.IAttendanceService;
 import com.example.bezma.util.GeoUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.bezma.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,10 +31,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +43,7 @@ public class AttendanceServiceImpl implements IAttendanceService {
     private final UserRepository userRepository;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final CloudinaryService cloudinaryService;
 
     @Value("${ai.service.url}")
     private String aiServiceUrl;
@@ -134,7 +132,8 @@ public class AttendanceServiceImpl implements IAttendanceService {
         // 3. Lưu ảnh bằng chứng (I/O thuần, không cần transaction)
         String photoUrl = saveEvidencePhoto("checkin", userId, photo);
 
-        // 4. Gọi AI Service để verify khuôn mặt (HTTP call, KHÔNG nằm trong transaction)
+        // 4. Gọi AI Service để verify khuôn mặt (HTTP call, KHÔNG nằm trong
+        // transaction)
         boolean faceVerified = verifyFaceWithAI(photo, user.getFaceEmbedding());
 
         // 5. Xác định trạng thái điểm danh
@@ -232,7 +231,8 @@ public class AttendanceServiceImpl implements IAttendanceService {
 
     /**
      * Kiểm tra vị trí GPS của nhân viên có nằm trong bán kính cho phép không.
-     * Nếu Tenant chưa cấu hình tọa độ văn phòng → bỏ qua (cho phép điểm danh ở bất kỳ đâu).
+     * Nếu Tenant chưa cấu hình tọa độ văn phòng → bỏ qua (cho phép điểm danh ở bất
+     * kỳ đâu).
      */
     private void validateLocation(Tenant tenant, BigDecimal lat, BigDecimal lon) {
         if (tenant.getOfficeLatitude() == null || tenant.getOfficeLongitude() == null) {
@@ -245,14 +245,12 @@ public class AttendanceServiceImpl implements IAttendanceService {
         boolean withinRadius = GeoUtils.isWithinRadius(
                 lat, lon,
                 tenant.getOfficeLatitude(), tenant.getOfficeLongitude(),
-                allowedRadius
-        );
+                allowedRadius);
 
         if (!withinRadius) {
             double distance = GeoUtils.calculateDistance(
                     lat, lon,
-                    tenant.getOfficeLatitude(), tenant.getOfficeLongitude()
-            );
+                    tenant.getOfficeLatitude(), tenant.getOfficeLongitude());
             log.warn("User ngoài vùng cho phép. Khoảng cách: {}m, Bán kính: {}m",
                     Math.round(distance), allowedRadius);
             throw new AppException(ErrorCode.LOCATION_OUT_OF_RANGE);
@@ -264,27 +262,20 @@ public class AttendanceServiceImpl implements IAttendanceService {
      * Trả về đường dẫn tương đối của file ảnh.
      */
     private String saveEvidencePhoto(String prefix, Long userId, MultipartFile photo) {
+        if (photo == null || photo.isEmpty())
+            return null;
         try {
-            String uploadDir = "uploads/attendance/";
-            Path uploadPath = Paths.get(uploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-
-            String fileName = prefix + "_" + userId + "_" + System.currentTimeMillis() + ".jpg";
-            Path filePath = uploadPath.resolve(fileName);
-            Files.copy(photo.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            return "/" + uploadDir + fileName;
-        } catch (IOException e) {
-            log.error("Lỗi lưu ảnh bằng chứng: {}", e.getMessage());
-            return null; // Không block điểm danh nếu lưu ảnh thất bại
+            return cloudinaryService.uploadFile(photo, "attendance/" + prefix);
+        } catch (Exception e) {
+            log.error("Lỗi lưu ảnh bằng chứng lên Cloudinary: {}", e.getMessage());
+            return null;
         }
     }
 
     /**
      * Gọi AI Service để verify khuôn mặt.
-     * Method này KHÔNG có @Transactional → không giữ DB connection trong khi chờ HTTP.
+     * Method này KHÔNG có @Transactional → không giữ DB connection trong khi chờ
+     * HTTP.
      *
      * @return true nếu khuôn mặt khớp, false nếu không khớp hoặc lỗi
      */
@@ -333,9 +324,9 @@ public class AttendanceServiceImpl implements IAttendanceService {
      */
     @Transactional
     protected Attendance saveAttendanceRecord(User user, Tenant tenant,
-                                              BigDecimal lat, BigDecimal lon,
-                                              String photoUrl,
-                                              AttendanceStatus status, String note) {
+            BigDecimal lat, BigDecimal lon,
+            String photoUrl,
+            AttendanceStatus status, String note) {
         Attendance attendance = Attendance.builder()
                 .user(user)
                 .tenant(tenant)

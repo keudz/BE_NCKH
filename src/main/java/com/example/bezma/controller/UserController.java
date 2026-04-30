@@ -8,8 +8,10 @@ import com.example.bezma.service.iService.IUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -46,6 +48,15 @@ public class UserController {
         return ApiResponse.<UserSummaryResponse>builder()
                 .data(userService.updateMyProfile(request))
                 .message("Cập nhật thông tin cá nhân thành công!")
+                .build();
+    }
+
+    @Operation(summary = "Cập nhật ảnh đại diện của phiên đăng nhập hiện tại")
+    @PatchMapping(value = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UserSummaryResponse> updateAvatar(@RequestParam("file") MultipartFile file) {
+        return ApiResponse.<UserSummaryResponse>builder()
+                .data(userService.updateAvatar(file))
+                .message("Cập nhật ảnh đại diện thành công!")
                 .build();
     }
 

@@ -1,12 +1,16 @@
 package com.example.bezma.dto.res.task;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class TaskResponse {
     private Long id;
     private String title;
@@ -42,6 +46,16 @@ public class TaskResponse {
     private String address;
     private String phoneNumber;
     private BigDecimal estimatedPrice;
+
+    // ── Project ──
+    private Long projectId;
+    private String projectName;
+
+    // ── Review ──
+    private String reviewNote;
+    private Long reviewedBy;
+    private LocalDateTime reviewedAt;
+    private Boolean requirePhoto;
 
     // ── Computed ──
     private Long durationMinutes; // Thời gian thực hiện (phút) = completionTime - checkInTime

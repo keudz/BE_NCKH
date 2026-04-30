@@ -11,7 +11,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"assignee", "customer"})
     List<Task> findByAssigneeId(Long assigneeId);
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"assignee", "customer"})
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"assignee", "customer", "project"})
+    List<Task> findByProjectId(Long projectId);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"assignee", "customer", "project"})
     List<Task> findByTenantId(Long tenantId);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"assignee", "customer"})

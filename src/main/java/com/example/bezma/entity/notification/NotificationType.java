@@ -5,6 +5,8 @@ public enum NotificationType {
     TASK_UPDATED,
     TASK_COMPLETED,
     TASK_DELETED,
+    TASK_APPROVED,
+    TASK_REJECTED,
     GENERAL
 }
 

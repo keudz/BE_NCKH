@@ -10,6 +10,7 @@ import com.example.bezma.dto.res.user.UserSummaryResponse;
 import com.example.bezma.entity.user.User;
 import com.example.bezma.repository.RoleRepository;
 import com.example.bezma.repository.UserRepository;
+import com.example.bezma.service.CloudinaryService;
 import com.example.bezma.service.iService.IUserService;
 import com.example.bezma.util.EmailService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -34,6 +36,7 @@ public class UserServiceImpl implements IUserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final CloudinaryService cloudinaryService;
 
     private User getCurrentUser() {
         String identifier = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -286,5 +289,25 @@ public class UserServiceImpl implements IUserService {
         user.setMustChangePassword(false);
         userRepository.save(user);
         log.info("User {} changed password successfully and reset mustChangePassword flag.", user.getUsername());
+    }
+
+    @Override
+    @Transactional
+    public UserSummaryResponse updateAvatar(MultipartFile file) {
+        User user = getCurrentUser();
+        
+        if (file == null || file.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_MESSAGE);
+        }
+
+        String folder = "users/" + user.getTenant().getId() + "/avatars";
+        String avatarUrl = cloudinaryService.uploadFile(file, folder);
+        
+        user.setAvatar(avatarUrl);
+        userRepository.save(user);
+        
+        log.info("User {} updated avatar successfully: {}", user.getUsername(), avatarUrl);
+        
+        return mapToResponse(user);
     }
 }
