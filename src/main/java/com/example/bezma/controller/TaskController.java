@@ -153,39 +153,4 @@ public class TaskController {
                                 .data(taskService.uploadReport(taskId, images))
                                 .build();
         }
-
-        @Operation(summary = "Admin phê duyệt task")
-        @PostMapping("/{taskId}/approve")
-        public ApiResponse<TaskResponse> approveTask(
-                        @PathVariable Long taskId,
-                        @AuthenticationPrincipal User admin,
-                        @RequestBody(required = false) java.util.Map<String, String> body) {
-                String note = body != null ? body.get("note") : null;
-                return ApiResponse.<TaskResponse>builder()
-                                .data(taskService.approveTask(taskId, admin.getId(), note))
-                                .message("Đã phê duyệt công việc!")
-                                .build();
-        }
-
-        @Operation(summary = "Admin từ chối task")
-        @PostMapping("/{taskId}/reject")
-        public ApiResponse<TaskResponse> rejectTask(
-                        @PathVariable Long taskId,
-                        @AuthenticationPrincipal User admin,
-                        @RequestBody java.util.Map<String, String> body) {
-                String reason = body.get("reason");
-                return ApiResponse.<TaskResponse>builder()
-                                .data(taskService.rejectTask(taskId, admin.getId(), reason))
-                                .message("Đã từ chối công việc!")
-                                .build();
-        }
-
-        @Operation(summary = "Lấy danh sách task đang chờ duyệt")
-        @GetMapping("/pending-review")
-        public ApiResponse<List<TaskResponse>> getPendingReview(@AuthenticationPrincipal User admin) {
-                return ApiResponse.<List<TaskResponse>>builder()
-                                .data(taskService.getPendingReviewTasks(admin.getTenant().getId()))
-                                .message("Lấy danh sách chờ duyệt thành công!")
-                                .build();
-        }
 }

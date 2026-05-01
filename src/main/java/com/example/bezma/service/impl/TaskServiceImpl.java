@@ -112,7 +112,6 @@ public class TaskServiceImpl implements ITaskService {
                 .address(customer != null ? customer.getAddress() : request.getAddress())
                 .companyName(customer != null ? customer.getCompanyName() : request.getCompanyName())
                 .estimatedPrice(request.getEstimatedPrice())
-                .requirePhoto(request.getRequirePhoto() != null ? request.getRequirePhoto() : false)
                 .build();
 
         Task savedTask = taskRepository.save(task);
@@ -242,11 +241,6 @@ public class TaskServiceImpl implements ITaskService {
             }
         }
 
-        // Validate: Nếu task yêu cầu ảnh bắt buộc
-        if (Boolean.TRUE.equals(task.getRequirePhoto()) && (photoUrl == null)) {
-            throw new AppException(ErrorCode.INVALID_MESSAGE); // "Bạn cần chụp ảnh minh chứng để check-in"
-        }
-
         // Cập nhật task
         task.setStatus(TaskStatus.CHECKED_IN);
         task.setCheckInTime(LocalDateTime.now());
@@ -296,11 +290,6 @@ public class TaskServiceImpl implements ITaskService {
             } catch (Exception e) {
                 log.error("Lỗi lưu ảnh completion: {}", e.getMessage());
             }
-        }
-
-        // Validate: Nếu task yêu cầu ảnh bắt buộc
-        if (Boolean.TRUE.equals(task.getRequirePhoto()) && (photoUrl == null)) {
-            throw new AppException(ErrorCode.INVALID_MESSAGE); // "Bạn cần chụp ảnh minh chứng khi hoàn thành"
         }
 
         // Cập nhật task → chuyển sang REVIEW để Admin duyệt
@@ -414,80 +403,6 @@ public class TaskServiceImpl implements ITaskService {
                 // Project info
                 .projectId(task.getProject() != null ? task.getProject().getId() : null)
                 .projectName(task.getProject() != null ? task.getProject().getName() : null)
-                // Review info
-                .reviewNote(task.getReviewNote())
-                .reviewedBy(task.getReviewedBy())
-                .reviewedAt(task.getReviewedAt())
-                .requirePhoto(task.getRequirePhoto())
                 .build();
-    }
-
-    @Override
-    @Transactional
-    public TaskResponse approveTask(Long taskId, Long adminId, String note) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
-
-        if (task.getStatus() != TaskStatus.REVIEW) {
-            throw new AppException(ErrorCode.INVALID_MESSAGE);
-        }
-
-        task.setStatus(TaskStatus.DONE);
-        task.setReviewNote(note);
-        task.setReviewedBy(adminId);
-        task.setReviewedAt(LocalDateTime.now());
-
-        Task savedTask = taskRepository.save(task);
-
-        // Gửi notification cho nhân viên
-        if (task.getAssignee() != null) {
-            notificationPublisher.publishNotification(
-                    task.getAssignee().getId(),
-                    task.getTenant().getId(),
-                    "✅ Công việc đã hoàn thành",
-                    "Công việc '" + task.getTitle() + "' đã được Admin phê duyệt.",
-                    NotificationType.TASK_APPROVED,
-                    task.getId());
-        }
-
-        return mapToResponse(savedTask);
-    }
-
-    @Override
-    @Transactional
-    public TaskResponse rejectTask(Long taskId, Long adminId, String reason) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
-
-        if (task.getStatus() != TaskStatus.REVIEW) {
-            throw new AppException(ErrorCode.INVALID_MESSAGE);
-        }
-
-        task.setStatus(TaskStatus.REJECTED);
-        task.setReviewNote(reason);
-        task.setReviewedBy(adminId);
-        task.setReviewedAt(LocalDateTime.now());
-
-        Task savedTask = taskRepository.save(task);
-
-        // Gửi notification cho nhân viên
-        if (task.getAssignee() != null) {
-            notificationPublisher.publishNotification(
-                    task.getAssignee().getId(),
-                    task.getTenant().getId(),
-                    "❌ Công việc bị từ chối",
-                    "Công việc '" + task.getTitle() + "' bị từ chối. Lý do: " + reason,
-                    NotificationType.TASK_REJECTED,
-                    task.getId());
-        }
-
-        return mapToResponse(savedTask);
-    }
-
-    @Override
-    public List<TaskResponse> getPendingReviewTasks(Long tenantId) {
-        return taskRepository.findByTenantIdAndStatus(tenantId, TaskStatus.REVIEW).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
     }
 }
