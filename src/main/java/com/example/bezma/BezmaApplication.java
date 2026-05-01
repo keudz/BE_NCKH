@@ -7,7 +7,8 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
 @EnableAsync
-@EnableJpaRepositories
+@EnableJpaRepositories(basePackages = "com.example.bezma.repository")
+
 public class BezmaApplication {
 
     public static void main(String[] args) {
