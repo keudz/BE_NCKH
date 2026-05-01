@@ -17,8 +17,8 @@ public class RedisExpirationListener extends KeyExpirationEventMessageListener {
     private final UserRepository userRepository;
 
     public RedisExpirationListener(RedisMessageListenerContainer listenerContainer,
-            TenantRepository tenantRepository,
-            UserRepository userRepository) {
+                                   TenantRepository tenantRepository,
+                                   UserRepository userRepository) {
         super(listenerContainer);
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;

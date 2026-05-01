@@ -30,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 //import java.util.Locale;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -118,7 +117,7 @@ public class TenantServiceImpl implements ITenantService {
         // 4. Tạo Mật khẩu tạm thời (6 ký tự CHỮ HOA/SỐ + đuôi @)
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder sb = new StringBuilder();
-       Random random = new Random();
+        java.util.Random random = new java.util.Random();
         for (int i = 0; i < 6; i++) {
             sb.append(chars.charAt(random.nextInt(chars.length())));
         }

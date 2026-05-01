@@ -41,7 +41,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
         @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.email = :email")
         boolean existsByEmail(@Param("email") String email);
 
-        @Transactional
         @Modifying
         @Query("DELETE FROM User u WHERE u.tenant.id = :tenantId")
         void deleteByTenantId(@Param("tenantId") Long tenantId);
