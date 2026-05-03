@@ -45,12 +45,28 @@ public class Invoice {
     @Enumerated(EnumType.STRING)
     private InvoiceType type; // SELL, BUY
 
+    @Column(name = "tax_code", length = 14)
+    private String taxCode;
+
+    @Column(name = "partner_name")
+    private String partnerName;
+
+    @Column(name = "invoice_symbol", length = 20)
+    private String invoiceSymbol;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method")
+    private PaymentMethod paymentMethod;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<InvoiceItem> items;
 
     @PrePersist
     protected void onCreate() {

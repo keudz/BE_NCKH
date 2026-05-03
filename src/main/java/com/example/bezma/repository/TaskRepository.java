@@ -4,6 +4,8 @@ import com.example.bezma.entity.task.Task;
 import com.example.bezma.entity.task.TaskStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @Repository
@@ -15,7 +17,13 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByProjectId(Long projectId);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"assignee", "customer", "project"})
+    Page<Task> findByTenantId(Long tenantId, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"assignee", "customer", "project"})
     List<Task> findByTenantId(Long tenantId);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"assignee", "customer"})
+    Page<Task> findByTenantIdAndStatus(Long tenantId, TaskStatus status, Pageable pageable);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"assignee", "customer"})
     List<Task> findByTenantIdAndStatus(Long tenantId, TaskStatus status);
@@ -66,4 +74,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
            "SUM(CASE WHEN t.status = 'DONE' THEN 1 ELSE 0 END) " +
            "FROM Task t WHERE t.tenant.id = :tenantId")
     List<Object[]> getTenantTaskStats(@org.springframework.data.repository.query.Param("tenantId") Long tenantId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT t FROM Task t WHERE t.id = :id")
+    java.util.Optional<Task> findByIdWithLock(@org.springframework.data.repository.query.Param("id") Long id);
 }

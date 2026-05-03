@@ -26,6 +26,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import com.example.bezma.common.res.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -137,6 +140,13 @@ public class TaskServiceImpl implements ITaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
 
+        Long currentTenantId = com.example.bezma.util.TenantContext.getCurrentTenantId();
+        if (currentTenantId != null && !task.getTenant().getId().equals(currentTenantId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        Long oldAssigneeId = task.getAssignee() != null ? task.getAssignee().getId() : null;
+
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
         task.setCategory(request.getCategory());
@@ -166,7 +176,21 @@ public class TaskServiceImpl implements ITaskService {
         task.setPhoneNumber(request.getPhoneNumber());
         task.setEstimatedPrice(request.getEstimatedPrice());
 
-        return mapToResponse(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+
+        // Gửi thông báo nếu có người nhận việc mới
+        Long newAssigneeId = request.getAssigneeId();
+        if (newAssigneeId != null && !newAssigneeId.equals(oldAssigneeId)) {
+            notificationPublisher.publishNotification(
+                    newAssigneeId,
+                    task.getTenant().getId(),
+                    "Công việc mới: " + task.getTitle(),
+                    "Bạn được giao nhiệm vụ: " + task.getDescription(),
+                    NotificationType.TASK_ASSIGNED,
+                    savedTask.getId());
+        }
+
+        return mapToResponse(savedTask);
     }
 
     @Override
@@ -175,11 +199,32 @@ public class TaskServiceImpl implements ITaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
 
+        Long currentTenantId = com.example.bezma.util.TenantContext.getCurrentTenantId();
+        if (currentTenantId != null && !task.getTenant().getId().equals(currentTenantId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
         // Chuyển đổi string sang Enum (xử lý cả trường hợp gạch ngang/dấu cách nếu có)
         String normalizedStatus = status.toUpperCase().replace(" ", "_");
         task.setStatus(TaskStatus.valueOf(normalizedStatus));
 
         return mapToResponse(taskRepository.save(task));
+    }
+
+    @Override
+    public PageResponse<TaskResponse> getTasksByTenant(Long tenantId, int page, int size) {
+        Page<Task> taskPage = taskRepository.findByTenantId(tenantId, PageRequest.of(page, size));
+        List<TaskResponse> content = taskPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return PageResponse.<TaskResponse>builder()
+                .content(content)
+                .pageNumber(taskPage.getNumber())
+                .pageSize(taskPage.getSize())
+                .totalElements(taskPage.getTotalElements())
+                .totalPages(taskPage.getTotalPages())
+                .build();
     }
 
     @Override
@@ -321,7 +366,7 @@ public class TaskServiceImpl implements ITaskService {
 
     @Transactional
     public TaskResponse claimTask(Long taskId, Long userId) {
-        Task task = taskRepository.findById(taskId)
+        Task task = taskRepository.findByIdWithLock(taskId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
 
         // Chỉ nhận task chưa giao cho ai
@@ -369,6 +414,12 @@ public class TaskServiceImpl implements ITaskService {
     public void deleteTask(Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
+
+        Long currentTenantId = com.example.bezma.util.TenantContext.getCurrentTenantId();
+        if (currentTenantId != null && !task.getTenant().getId().equals(currentTenantId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        
         taskRepository.delete(task);
     }
 
@@ -482,6 +533,22 @@ public class TaskServiceImpl implements ITaskService {
         }
 
         return mapToResponse(savedTask);
+    }
+
+    @Override
+    public PageResponse<TaskResponse> getPendingReviewTasks(Long tenantId, int page, int size) {
+        Page<Task> taskPage = taskRepository.findByTenantIdAndStatus(tenantId, TaskStatus.REVIEW, PageRequest.of(page, size));
+        List<TaskResponse> content = taskPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return PageResponse.<TaskResponse>builder()
+                .content(content)
+                .pageNumber(taskPage.getNumber())
+                .pageSize(taskPage.getSize())
+                .totalElements(taskPage.getTotalElements())
+                .totalPages(taskPage.getTotalPages())
+                .build();
     }
 
     @Override

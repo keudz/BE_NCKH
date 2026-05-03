@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.bezma.common.res.PageResponse;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -43,9 +44,12 @@ public class TaskController {
 
         @Operation(summary = "Lấy tất cả task của doanh nghiệp")
         @GetMapping("/tenant/{tenantId}")
-        public ApiResponse<List<TaskResponse>> getTasksByTenant(@PathVariable Long tenantId) {
-                return ApiResponse.<List<TaskResponse>>builder()
-                                .data(taskService.getTasksByTenant(tenantId))
+        public ApiResponse<PageResponse<TaskResponse>> getTasksByTenant(
+                        @PathVariable Long tenantId,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size) {
+                return ApiResponse.<PageResponse<TaskResponse>>builder()
+                                .data(taskService.getTasksByTenant(tenantId, page, size))
                                 .message("Lấy danh sách task doanh nghiệp thành công!")
                                 .build();
         }
@@ -182,9 +186,12 @@ public class TaskController {
 
         @Operation(summary = "Lấy danh sách task đang chờ duyệt")
         @GetMapping("/pending-review")
-        public ApiResponse<List<TaskResponse>> getPendingReview(@AuthenticationPrincipal User admin) {
-                return ApiResponse.<List<TaskResponse>>builder()
-                                .data(taskService.getPendingReviewTasks(admin.getTenant().getId()))
+        public ApiResponse<PageResponse<TaskResponse>> getPendingReview(
+                        @AuthenticationPrincipal User admin,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size) {
+                return ApiResponse.<PageResponse<TaskResponse>>builder()
+                                .data(taskService.getPendingReviewTasks(admin.getTenant().getId(), page, size))
                                 .message("Lấy danh sách chờ duyệt thành công!")
                                 .build();
         }

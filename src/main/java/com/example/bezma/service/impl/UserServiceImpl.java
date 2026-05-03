@@ -39,6 +39,12 @@ public class UserServiceImpl implements IUserService {
     private final CloudinaryService cloudinaryService;
 
     private User getCurrentUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof User) {
+            return (User) principal;
+        }
+        
+        // Fallback logic if principal is just a string (should not happen with current JWT setup)
         String identifier = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByPhone(identifier)
                 .or(() -> userRepository.findByUsername(identifier))

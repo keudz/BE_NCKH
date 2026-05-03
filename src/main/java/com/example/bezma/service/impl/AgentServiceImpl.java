@@ -13,6 +13,9 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -31,13 +34,27 @@ public class AgentServiceImpl implements IAgentService {
     public AgentExecuteResponse executePipeline(AgentExecuteRequest request, User user) {
         String url = agentServiceUrl + "/api/v1/agent/execute";
         
-        Map<String, Object> body = Map.of(
-            "prompt", request.getPrompt(),
-            "tenant_id", (user != null && user.getTenant() != null) ? user.getTenant().getId() : 0,
-            "user_id", (user != null && user.getId() != null) ? user.getId() : 0,
-            "tenant_name", (user != null && user.getTenant() != null) ? user.getTenant().getName() : "Doanh nghiệp",
-            "tenant_description", (user != null && user.getTenant() != null && user.getTenant().getDescription() != null) ? user.getTenant().getDescription() : ""
-        );
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("prompt", request.getPrompt());
+        body.put("tenant_id", (user != null && user.getTenant() != null) ? user.getTenant().getId() : 0);
+        body.put("user_id", (user != null && user.getId() != null) ? user.getId() : 0);
+        body.put("tenant_name", (user != null && user.getTenant() != null) ? user.getTenant().getName() : "Doanh nghiệp");
+        body.put("tenant_description", (user != null && user.getTenant() != null && user.getTenant().getDescription() != null) ? user.getTenant().getDescription() : "");
+        body.put("history", request.getHistory() != null ? request.getHistory() : java.util.List.of());
+        
+        // Trích xuất JWT token hiện tại để chuyển tiếp sang AI Agent
+        ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (requestAttributes != null) {
+            HttpServletRequest httpRequest = requestAttributes.getRequest();
+            String bearerToken = httpRequest.getHeader("Authorization");
+            if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+                body.put("access_token", bearerToken.substring(7));
+            } else {
+                // Thử lấy từ tham số nếu là websocket context (tùy chọn)
+                String paramToken = httpRequest.getParameter("token");
+                if (paramToken != null) body.put("access_token", paramToken);
+            }
+        }
         
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -93,6 +110,17 @@ public class AgentServiceImpl implements IAgentService {
             "tenant_name", (user != null && user.getTenant() != null) ? user.getTenant().getName() : "Doanh nghiệp",
             "tenant_description", (user != null && user.getTenant() != null && user.getTenant().getDescription() != null) ? user.getTenant().getDescription() : ""
         );
+        
+        // Trích xuất JWT token hiện tại để chuyển tiếp sang AI Agent (Preview)
+        ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (requestAttributes != null) {
+            HttpServletRequest httpRequest = requestAttributes.getRequest();
+            String bearerToken = httpRequest.getHeader("Authorization");
+            if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+                body = new java.util.HashMap<>(body); // Make mutable
+                body.put("access_token", bearerToken.substring(7));
+            }
+        }
         
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

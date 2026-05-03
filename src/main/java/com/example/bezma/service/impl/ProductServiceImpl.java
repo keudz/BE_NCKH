@@ -14,6 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import com.example.bezma.common.res.PageResponse;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,6 +30,36 @@ public class ProductServiceImpl implements IProductService {
     private final ProductRepository productRepository;
     private final TenantRepository tenantRepository;
     private final CloudinaryService cloudinaryService;
+
+    @Override
+    public PageResponse<ProductResponse> getProductsByTenant(Long tenantId, String category, String search, String status, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Product> productPage;
+        
+        if (category != null && !category.isEmpty() && !"Tất cả".equals(category)) {
+            productPage = productRepository.findByTenantIdAndCategory(tenantId, category, pageable);
+        } else {
+            productPage = productRepository.findByTenantId(tenantId, pageable);
+        }
+
+        // Apply search filter in memory for now if there is search or status, otherwise just return mapped page
+        List<ProductResponse> filteredList = productPage.getContent().stream()
+                .map(this::mapToResponse)
+                .filter(p -> search == null || search.isEmpty() || 
+                        (p.getName() != null && p.getName().toLowerCase().contains(search.toLowerCase())) || 
+                        (p.getSku() != null && p.getSku().toLowerCase().contains(search.toLowerCase())))
+                .filter(p -> status == null || status.isEmpty() || "Tất cả".equals(status) || p.getStatus().equalsIgnoreCase(status))
+                .collect(Collectors.toList());
+
+        return PageResponse.<ProductResponse>builder()
+                .content(filteredList)
+                .pageNumber(productPage.getNumber())
+                .pageSize(productPage.getSize())
+                .totalElements(productPage.getTotalElements())
+                .totalPages(productPage.getTotalPages())
+                .last(productPage.isLast())
+                .build();
+    }
 
     @Override
     public List<ProductResponse> getProductsByTenant(Long tenantId, String category, String search, String status) {
@@ -68,9 +103,13 @@ public class ProductServiceImpl implements IProductService {
 
     @Override
     @Transactional
-    public ProductResponse updateProduct(Long id, CreateProductRequest request, MultipartFile image) {
+    public ProductResponse updateProduct(Long id, Long tenantId, CreateProductRequest request, MultipartFile image) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        if (!product.getTenant().getId().equals(tenantId)) {
+            throw new RuntimeException("Unauthorized: Bạn không có quyền cập nhật sản phẩm này");
+        }
 
         String imageUrl = request.getImageUrl();
         if (image != null && !image.isEmpty()) {
@@ -93,7 +132,13 @@ public class ProductServiceImpl implements IProductService {
 
     @Override
     @Transactional
-    public void deleteProduct(Long id) {
+    public void deleteProduct(Long id, Long tenantId) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        if (!product.getTenant().getId().equals(tenantId)) {
+            throw new RuntimeException("Unauthorized: Bạn không có quyền xoá sản phẩm này");
+        }
         productRepository.deleteById(id);
     }
 

@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     # Gemini Config
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-1.5-flash"
+
+    # Nvidia Config (OpenAI Compatible)
+    NVIDIA_API_KEY: str = ""
+    NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
+    NVIDIA_MODEL: str = "meta/llama-3.1-8b-instruct"
     
     IMAGE_PROVIDER: str = "pollinations"
     IMAGE_API_KEY: str = ""

@@ -9,7 +9,9 @@ import org.hibernate.annotations.Filter;
 
 @Entity
 @Table(name = "products", indexes = {
-    @Index(name = "idx_product_tenant", columnList = "tenant_id")
+    @Index(name = "idx_product_tenant", columnList = "tenant_id"),
+    @Index(name = "idx_product_category", columnList = "category"),
+    @Index(name = "idx_product_created", columnList = "createdAt")
 })
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 @Getter
@@ -28,6 +30,9 @@ public class Product {
     private String sku;
 
     private String category;
+    
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     private Double price;
 
