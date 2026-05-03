@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 class AgentRequest(BaseModel):
     prompt: str
@@ -7,3 +7,5 @@ class AgentRequest(BaseModel):
     user_id: Optional[int] = None
     tenant_name: Optional[str] = "Doanh nghiệp"
     tenant_description: Optional[str] = ""
+    access_token: Optional[str] = None
+    history: Optional[List[dict]] = []

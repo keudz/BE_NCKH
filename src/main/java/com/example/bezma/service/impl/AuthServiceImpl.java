@@ -41,6 +41,7 @@ public class AuthServiceImpl implements IAuthService {
     private final com.example.bezma.util.EmailService emailService;
 
     private UserSummaryResponse mapToUserSummaryResponse(User user) {
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd");
         return UserSummaryResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -54,6 +55,10 @@ public class AuthServiceImpl implements IAuthService {
                 .isActive(user.getIsActive())
                 .isDeleted(user.getIsDeleted())
                 .mustChangePassword(user.getMustChangePassword())
+                .birthday(user.getBirthday() != null ? user.getBirthday().format(formatter) : null)
+                .gender(user.getGender())
+                .address(user.getAddress())
+                .identityCard(user.getIdentityCard())
                 .build();
     }
 

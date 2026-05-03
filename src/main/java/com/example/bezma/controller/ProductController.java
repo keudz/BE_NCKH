@@ -10,8 +10,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.bezma.util.TenantContext;
+import com.example.bezma.common.res.PageResponse;
 
-import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/v1/products")
@@ -23,13 +25,15 @@ public class ProductController {
 
     @Operation(summary = "Lấy danh sách sản phẩm theo Tenant")
     @GetMapping
-    public ApiResponse<List<ProductResponse>> getByTenant(
-            @RequestHeader("X-Tenant-Id") Long tenantId,
+    public ApiResponse<PageResponse<ProductResponse>> getByTenant(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status) {
-        return ApiResponse.<List<ProductResponse>>builder()
-                .data(productService.getProductsByTenant(tenantId, category, search, status))
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Long tenantId = TenantContext.getCurrentTenantId();
+        return ApiResponse.<PageResponse<ProductResponse>>builder()
+                .data(productService.getProductsByTenant(tenantId, category, search, status, page, size))
                 .build();
     }
 
@@ -38,6 +42,7 @@ public class ProductController {
     public ApiResponse<ProductResponse> create(
             @RequestPart("product") CreateProductRequest request,
             @RequestPart(value = "image", required = false) MultipartFile image) {
+        request.setTenantId(TenantContext.getCurrentTenantId()); // Gắn tenant ID an toàn
         return ApiResponse.<ProductResponse>builder()
                 .data(productService.createProduct(request, image))
                 .message("Thêm sản phẩm thành công!")
@@ -50,8 +55,9 @@ public class ProductController {
             @PathVariable Long id,
             @RequestPart("product") CreateProductRequest request,
             @RequestPart(value = "image", required = false) MultipartFile image) {
+        Long tenantId = TenantContext.getCurrentTenantId();
         return ApiResponse.<ProductResponse>builder()
-                .data(productService.updateProduct(id, request, image))
+                .data(productService.updateProduct(id, tenantId, request, image))
                 .message("Cập nhật thành công!")
                 .build();
     }
@@ -59,7 +65,8 @@ public class ProductController {
     @Operation(summary = "Xoá sản phẩm")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
-        productService.deleteProduct(id);
+        Long tenantId = TenantContext.getCurrentTenantId();
+        productService.deleteProduct(id, tenantId);
         return ApiResponse.<Void>builder()
                 .message("Đã xoá sản phẩm khỏi kho!")
                 .build();

@@ -27,8 +27,9 @@ class ReportTool(BaseTool):
             }
         )
 
-    async def run(self, content: str, title: str = "Báo cáo doanh nghiệp") -> str:
-        filename = f"BÁO CÁO DOANH NGHIỆP {tenant_name}_{int(time.time())}.docx"
+    async def run(self, content: str, title: str = "Báo cáo doanh nghiệp", tenant_name: str = "Doanh nghiệp") -> str:
+        import time
+        filename = f"BAO_CAO_{tenant_name}_{int(time.time())}.docx"
         filepath = self.doc_service.generate_docx(content, filename, title)
         url = f"http://localhost:8001/static/{filename}"
         return f"Đã tạo báo cáo thành công. Người dùng có thể tải về tại: {url}"

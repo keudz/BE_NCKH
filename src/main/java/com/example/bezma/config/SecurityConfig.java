@@ -48,11 +48,11 @@ public class SecurityConfig {
                                                                 "/api/auth/logout",
                                                                 "/api/auth/login/zalo",
                                                                 "/api/v1/tenants/public/verify",
-                                                                "/api/v1/tenants/public/**", // Chỉ cho phép các
-                                                                                             // endpoint public của
-                                                                                             // tenant
+                                                                "/api/v1/tenants/public/**",
                                                                 "/api/v1/users/public/**",
-                                                                "/api/v1/agent/**")
+                                                                "/api/v1/agent/**",
+                                                                "/ws-notification",
+                                                                "/ws-notification/**")
                                                 .permitAll()
 
                                                 // 2. Swagger UI + OpenAPI docs - phải public hoàn toàn
@@ -109,10 +109,17 @@ public class SecurityConfig {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration config = new CorsConfiguration();
-                config.setAllowedOriginPatterns(List.of("http://localhost:[*]",
-                                "http://192.168.31.57:[*]", "zbrowser://h5.cloud.zalo.me", "https://h5.zdn.vn",
-                                "https://be-nckh.fly.dev", "https://fe-zma-admin.vercel.app",
-                                "https://businesmanager.vercel.app", "https://*.vercel.app")); // React, Vue...
+                config.setAllowedOriginPatterns(List.of(
+                                "http://localhost:[*]",
+                                "http://127.0.0.1:[*]",
+                                "http://192.168.31.57:[*]",
+                                "zbrowser://h5.cloud.zalo.me",
+                                "https://h5.zdn.vn",
+                                "https://*.zapps.vn",
+                                "https://be-nckh.fly.dev",
+                                "https://fe-zma-admin.vercel.app",
+                                "https://businesmanager.vercel.app",
+                                "https://*.vercel.app")); // React, Vue...
                 config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                 config.setAllowedHeaders(List.of("*"));
                 config.setAllowCredentials(true); // quan trọng để cookie được gửi

@@ -6,7 +6,7 @@ import com.example.bezma.entity.notification.NotificationType;
 import java.util.List;
 
 public interface INotificationService {
-    void createNotification(Long userId, Long tenantId, String title, String message, NotificationType type, Long relatedTaskId);
+    NotificationResponse createNotification(Long userId, Long tenantId, String title, String message, NotificationType type, Long relatedTaskId);
 
     List<NotificationResponse> getUserNotifications(Long userId);
 

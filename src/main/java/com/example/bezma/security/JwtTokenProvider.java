@@ -85,15 +85,29 @@ public class JwtTokenProvider {
     }
 
     // ---- Lấy Authentication (Fix lỗi Cast Class) ----
-    public Authentication getAuthentication(String token) {
+    public Authentication getAuthentication(String token, Claims claims) {
         try {
-            String username = getUsernameFromToken(token); // Dùng hàm đồng nhất ở dưới
+            String username = claims.getSubject();
 
             // QUAN TRỌNG: Load UserDetails xịn từ DB
+            // Chúng ta vẫn load từ DB để đảm bảo User còn hoạt động và có đầy đủ thông tin Entity
+            // Nhưng nhờ việc truyền claims, filter không cần parse lại JWT nhiều lần
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
             // Trả về Token với Principal là UserDetails (User base)
             return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public Claims getClaimsFromToken(String token) {
+        try {
+            return Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
         } catch (Exception e) {
             return null;
         }
@@ -139,7 +153,11 @@ public class JwtTokenProvider {
     public Long getUserIdFromToken(String token) {
         try {
             Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-            return claims.get("userId", Long.class);
+            Object userId = claims.get("userId");
+            if (userId instanceof Number) {
+                return ((Number) userId).longValue();
+            }
+            return null;
         } catch (Exception e) {
             return null;
         }
@@ -148,7 +166,11 @@ public class JwtTokenProvider {
     public Long getTenantIdFromToken(String token) {
         try {
             Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-            return claims.get("tenantId", Long.class);
+            Object tenantId = claims.get("tenantId");
+            if (tenantId instanceof Number) {
+                return ((Number) tenantId).longValue();
+            }
+            return null;
         } catch (Exception e) {
             return null;
         }

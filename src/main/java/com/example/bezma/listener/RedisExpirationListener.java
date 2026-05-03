@@ -11,14 +11,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @Slf4j
+// Chỉ khởi tạo listener nếu Redis đã được bật thành công
+@org.springframework.boot.autoconfigure.condition.ConditionalOnBean(org.springframework.data.redis.listener.RedisMessageListenerContainer.class)
 public class RedisExpirationListener extends KeyExpirationEventMessageListener {
 
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
 
     public RedisExpirationListener(RedisMessageListenerContainer listenerContainer,
-                                   TenantRepository tenantRepository,
-                                   UserRepository userRepository) {
+            TenantRepository tenantRepository,
+            UserRepository userRepository) {
         super(listenerContainer);
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;

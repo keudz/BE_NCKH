@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
 public class InvoiceResponse {
     private Long id;
     private String invoiceNumber;
+    private String invoiceSymbol;
+    private String taxCode;
+    private String partnerName;
+    private String paymentMethod;
     private BigDecimal totalAmount;
     private BigDecimal taxRate;
     private BigDecimal taxAmount;
@@ -20,4 +24,5 @@ public class InvoiceResponse {
     private String description;
     private InvoiceType type;
     private LocalDateTime createdAt;
+    private java.util.List<InvoiceItemResponse> items;
 }

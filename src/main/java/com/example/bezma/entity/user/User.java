@@ -21,7 +21,11 @@ import java.util.Set;
 @Entity
 @Table(name = "users", indexes = {
         @Index(name = "idx_user_fullname", columnList = "full_name"),
-        @Index(name = "idx_user_phone", columnList = "phone_number")
+        @Index(name = "idx_user_phone", columnList = "phone_number"),
+        @Index(name = "idx_user_username", columnList = "user_name"),
+        @Index(name = "idx_user_tenant", columnList = "tenant_id"),
+        @Index(name = "idx_user_status", columnList = "status"),
+        @Index(name = "idx_user_created", columnList = "created_at")
 })
 @Getter
 @Setter
@@ -74,7 +78,7 @@ public class User extends BaseEntity implements UserDetails {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id")
     private Role role;
 

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import com.example.bezma.util.TenantContext;
+import io.jsonwebtoken.Claims;
 
 import java.io.IOException;
 
@@ -30,6 +31,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String requestURI = request.getRequestURI();
 
+        if (requestURI.startsWith("/ws-notification")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         if (!requestURI.contains("/favicon.ico")) {
             log.info("Processing request: {} {}", request.getMethod(), requestURI);
         }
@@ -37,20 +43,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = getJwtFromRequest(request);
 
-            if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
-                Authentication authentication = jwtTokenProvider.getAuthentication(jwt);
+            if (StringUtils.hasText(jwt)) {
+                Claims claims = jwtTokenProvider.getClaimsFromToken(jwt);
+                
+                if (claims != null && jwtTokenProvider.validateToken(jwt)) {
+                    Authentication authentication = jwtTokenProvider.getAuthentication(jwt, claims);
 
-                if (authentication != null) {
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    if (authentication != null) {
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    Long userId = jwtTokenProvider.getUserIdFromToken(jwt);
-                    if (userId != null) {
-                        request.setAttribute("userId", userId);
-                    }
+                        Long userId = claims.get("userId", Long.class);
+                        if (userId != null) {
+                            request.setAttribute("userId", userId);
+                        }
 
-                    Long tenantId = jwtTokenProvider.getTenantIdFromToken(jwt);
-                    if (tenantId != null) {
-                        TenantContext.setCurrentTenantId(tenantId);
+                        Long tenantId = claims.get("tenantId", Long.class);
+                        if (tenantId != null) {
+                            TenantContext.setCurrentTenantId(tenantId);
+                        }
                     }
                 }
             }
@@ -58,6 +68,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         } catch (Exception ex) {
             log.error("Could not set user authentication in security context", ex);
+            filterChain.doFilter(request, response);
         } finally {
             TenantContext.clear();
         }

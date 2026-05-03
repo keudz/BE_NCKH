@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+
 import java.util.Map;
 import java.util.HashMap;
 
@@ -27,9 +27,15 @@ public class ReportServiceImpl {
     // 1. BÁO CÁO CÁ NHÂN (Cho Nhân viên)
     public ProgressReportResponse getMyProgress() {
         // Lấy User hiện tại
-        String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
-        User currentUser = userRepository.findByUsername(currentIdentifier) // Hoặc findByPhone tuỳ bạn set
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser;
+        if (principal instanceof User) {
+            currentUser = (User) principal;
+        } else {
+            String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
+            currentUser = userRepository.findByUsername(currentIdentifier)
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        }
 
         Long userId = currentUser.getId();
         long total = taskRepository.countByAssigneeId(userId);
@@ -49,12 +55,15 @@ public class ReportServiceImpl {
     // 2. BÁO CÁO TỔNG QUAN DOANH NGHIỆP (Cho Admin)
     public ProgressReportResponse getTenantProgress() {
         // Lấy Admin hiện tại
-        String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
-        Optional<User> adminOptional = userRepository.findByUsername(currentIdentifier);
-        if (!adminOptional.isPresent()) {
-            throw new AppException(ErrorCode.USER_NOT_FOUND);
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User admin;
+        if (principal instanceof User) {
+            admin = (User) principal;
+        } else {
+            String currentIdentifier = SecurityContextHolder.getContext().getAuthentication().getName();
+            admin = userRepository.findByUsername(currentIdentifier)
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         }
-        User admin = adminOptional.get();
         Long tenantId = admin.getTenant().getId();
 
         // Thống kê tổng công ty bằng 1 query duy nhất

@@ -15,6 +15,8 @@ public class AgentExecuteRequest {
     @NotBlank(message = "Prompt cannot be blank")
     private String prompt;
     
+    private java.util.List<java.util.Map<String, String>> history;
+    
     // Optional session ID if conversation context is required later
     private String sessionId;
 }

@@ -8,10 +8,15 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+/**
+ * Cấu hình Redis - Sử dụng Conditional để ứng dụng vẫn khởi động được khi không có Redis (dev mode)
+ * Sếp hãy giữ dòng này để tránh bị sập app khi Redis Cloud lỗi DNS/Kết nối nhé.
+ */
 @Configuration
+@org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("${spring.data.redis.enabled:true} || ${SPRING_DATA_REDIS_ENABLED:true}")
 public class RedisConfig {
 
-    //@SuppressWarnings("removal")
+    // @SuppressWarnings("removal")
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();

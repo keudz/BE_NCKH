@@ -9,7 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import com.example.bezma.common.res.PageResponse;
 
 @RestController
 @RequestMapping("/api/v1/customers")
@@ -20,18 +23,47 @@ public class CustomerController {
         // private final TenantRepository tenantRepository;
 
         @GetMapping
-        public ApiResponse<List<Customer>> getAll(@AuthenticationPrincipal User currentUser) {
-                return ApiResponse.<List<Customer>>builder()
-                                .data(customerRepository.findByTenantId(currentUser.getTenant().getId()))
+        public ApiResponse<PageResponse<Customer>> getAll(
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size,
+                        @AuthenticationPrincipal User currentUser) {
+                Pageable pageable = PageRequest.of(page, size);
+                Page<Customer> customerPage = customerRepository.findByTenantId(currentUser.getTenant().getId(), pageable);
+                
+                PageResponse<Customer> pageResponse = PageResponse.<Customer>builder()
+                        .content(customerPage.getContent())
+                        .pageNumber(customerPage.getNumber())
+                        .pageSize(customerPage.getSize())
+                        .totalElements(customerPage.getTotalElements())
+                        .totalPages(customerPage.getTotalPages())
+                        .last(customerPage.isLast())
+                        .build();
+
+                return ApiResponse.<PageResponse<Customer>>builder()
+                                .data(pageResponse)
                                 .build();
         }
 
         @GetMapping("/search")
-        public ApiResponse<List<Customer>> search(
+        public ApiResponse<PageResponse<Customer>> search(
                         @RequestParam("query") String query,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size,
                         @AuthenticationPrincipal User currentUser) {
-                return ApiResponse.<List<Customer>>builder()
-                                .data(customerRepository.searchCustomers(currentUser.getTenant().getId(), query))
+                Pageable pageable = PageRequest.of(page, size);
+                Page<Customer> customerPage = customerRepository.searchCustomers(currentUser.getTenant().getId(), query, pageable);
+                
+                PageResponse<Customer> pageResponse = PageResponse.<Customer>builder()
+                        .content(customerPage.getContent())
+                        .pageNumber(customerPage.getNumber())
+                        .pageSize(customerPage.getSize())
+                        .totalElements(customerPage.getTotalElements())
+                        .totalPages(customerPage.getTotalPages())
+                        .last(customerPage.isLast())
+                        .build();
+
+                return ApiResponse.<PageResponse<Customer>>builder()
+                                .data(pageResponse)
                                 .build();
         }
 
