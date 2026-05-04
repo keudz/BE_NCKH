@@ -1,6 +1,7 @@
 package com.example.bezma.service.impl;
 
 import com.example.bezma.dto.req.project.CreateProjectRequest;
+import com.example.bezma.dto.res.project.ProjectMemberResponse;
 import com.example.bezma.dto.res.project.ProjectResponse;
 import com.example.bezma.entity.project.Project;
 import com.example.bezma.entity.project.ProjectMember;
@@ -102,7 +103,51 @@ public class ProjectServiceImpl implements IProjectService {
                 .forEach(projectMemberRepository::delete);
     }
 
+    @Override
+    @Transactional
+    public ProjectResponse updateProject(Long id, CreateProjectRequest request) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
+
+        User manager = null;
+        if (request.getManagerId() != null) {
+            manager = userRepository.findById(request.getManagerId())
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        }
+
+        project.setName(request.getName());
+        project.setDescription(request.getDescription());
+        project.setStartDate(request.getStartDate());
+        project.setEndDate(request.getEndDate());
+        project.setStatus(request.getStatus());
+        project.setManager(manager);
+
+        project = projectRepository.save(project);
+        return mapToResponse(project);
+    }
+
+    @Override
+    @Transactional
+    public void deleteProject(Long id) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
+        
+        // Remove all members first
+        projectMemberRepository.findByProjectId(id).forEach(projectMemberRepository::delete);
+        
+        projectRepository.delete(project);
+    }
+
     private ProjectResponse mapToResponse(Project project) {
+        List<ProjectMemberResponse> members = projectMemberRepository.findByProjectId(project.getId()).stream()
+                .map(m -> ProjectMemberResponse.builder()
+                        .userId(m.getUser().getId())
+                        .fullName(m.getUser().getFullName())
+                        .roleName(m.getUser().getRole() != null ? m.getUser().getRole().getName() : null)
+                        .phone(m.getUser().getPhone())
+                        .build())
+                .collect(Collectors.toList());
+
         return ProjectResponse.builder()
                 .id(project.getId())
                 .name(project.getName())
@@ -113,6 +158,7 @@ public class ProjectServiceImpl implements IProjectService {
                 .managerId(project.getManager() != null ? project.getManager().getId() : null)
                 .managerName(project.getManager() != null ? project.getManager().getFullName() : null)
                 .tenantId(project.getTenant().getId())
+                .members(members)
                 .build();
     }
 }

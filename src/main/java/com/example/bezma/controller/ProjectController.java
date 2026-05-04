@@ -66,11 +66,23 @@ public class ProjectController {
         return ApiResponse.<Void>builder().message("Thêm thành viên thành công!").build();
     }
 
-    @Operation(summary = "Xóa thành viên khỏi dự án (Admin/Manager)")
-    @DeleteMapping("/{id}/members/{userId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'MANAGER')")
-    public ApiResponse<Void> removeMember(@PathVariable Long id, @PathVariable Long userId) {
-        projectService.removeMemberFromProject(id, userId);
-        return ApiResponse.<Void>builder().message("Xóa thành viên thành công!").build();
+    @Operation(summary = "Cập nhật dự án (Admin)")
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<ProjectResponse> updateProject(
+            @PathVariable Long id,
+            @RequestBody CreateProjectRequest request) {
+        return ApiResponse.<ProjectResponse>builder()
+                .data(projectService.updateProject(id, request))
+                .message("Cập nhật dự án thành công!")
+                .build();
+    }
+
+    @Operation(summary = "Xóa dự án (Admin)")
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<Void> deleteProject(@PathVariable Long id) {
+        projectService.deleteProject(id);
+        return ApiResponse.<Void>builder().message("Xóa dự án thành công!").build();
     }
 }

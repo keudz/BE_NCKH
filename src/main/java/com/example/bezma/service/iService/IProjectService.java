@@ -11,4 +11,6 @@ public interface IProjectService {
     ProjectResponse getProjectDetail(Long projectId);
     void addMemberToProject(Long projectId, Long userId);
     void removeMemberFromProject(Long projectId, Long userId);
+    ProjectResponse updateProject(Long id, CreateProjectRequest request);
+    void deleteProject(Long id);
 }
