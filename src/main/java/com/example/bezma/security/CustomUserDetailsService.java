@@ -19,7 +19,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
         // 1. Thử tìm theo Username trước (Dành cho Basic Login)
         return userRepository.findByUsername(identifier)
-                .or(() -> userRepository.findByPhone(identifier)) // Thêm tìm theo Phone
+                .or(() -> userRepository.findByPhone(identifier)) // Tìm theo Phone
                 .or(() -> userRepository.findByZaloId(identifier)) // Tìm theo ZaloId
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng với: " + identifier));
 

@@ -24,7 +24,6 @@ public class NotificationServiceImpl implements INotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
-    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -46,20 +45,9 @@ public class NotificationServiceImpl implements INotificationService {
                 .build();
 
         Notification saved = notificationRepository.save(notification);
-        NotificationResponse response = mapToResponse(saved);
-
-        // Gửi luôn qua WebSocket từ đây
-        try {
-            messagingTemplate.convertAndSendToUser(
-                    userId.toString(),
-                    "/queue/notifications",
-                    response
-            );
-        } catch (Exception e) {
-            System.err.println("Lỗi gửi WebSocket: " + e.getMessage());
-        }
-
-        return response;
+        // NotificationPublisher sẽ gửi WebSocket sau khi nhận response này
+        // Không gửi ở đây để tránh duplicate
+        return mapToResponse(saved);
     }
 
     @Override

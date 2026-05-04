@@ -51,12 +51,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
         @Query("SELECT u FROM User u " +
                 "LEFT JOIN FETCH u.tenant t " +
                 "LEFT JOIN FETCH u.role r " +
+                "LEFT JOIN FETCH r.permissions " +
+                "LEFT JOIN FETCH u.permissions " +
                 "WHERE u.zaloId = :zaloId")
         Optional<User> findByZaloId(@Param("zaloId") String zaloId);
 
         @Query("SELECT u FROM User u " +
                 "LEFT JOIN FETCH u.tenant t " +
                 "LEFT JOIN FETCH u.role r " +
+                "LEFT JOIN FETCH r.permissions " +
+                "LEFT JOIN FETCH u.permissions " +
                 "WHERE u.phone = :phone")
         Optional<User> findByPhone(@Param("phone") String phone);
 
@@ -67,7 +71,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
         List<User> findAllByTenantId(Long tenantId);
 
         // Thêm hàm này nếu chưa có để check trùng lặp khi đổi email
-        Optional<User> findByEmail(String email);
+        @Query("SELECT u FROM User u " +
+                "LEFT JOIN FETCH u.tenant t " +
+                "LEFT JOIN FETCH u.role r " +
+                "LEFT JOIN FETCH r.permissions " +
+                "LEFT JOIN FETCH u.permissions " +
+                "WHERE LOWER(u.email) = LOWER(:email)")
+        Optional<User> findByEmail(@Param("email") String email);
 
         Optional<User> findByIdAndTenantId(Long id, Long tenantId);
         long countByTenantId(Long tenantId);

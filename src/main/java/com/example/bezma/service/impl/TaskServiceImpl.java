@@ -345,7 +345,7 @@ public class TaskServiceImpl implements ITaskService {
 
         // Validate: Nếu task yêu cầu ảnh bắt buộc
         if (Boolean.TRUE.equals(task.getRequirePhoto()) && (photoUrl == null)) {
-            throw new AppException(ErrorCode.INVALID_MESSAGE); // "Bạn cần chụp ảnh minh chứng khi hoàn thành"
+            throw new AppException(ErrorCode.INVALID_MESSAGE);
         }
 
         // Cập nhật task → chuyển sang REVIEW để Admin duyệt
@@ -355,7 +355,18 @@ public class TaskServiceImpl implements ITaskService {
         task.setResultNote(resultNote);
         task.setCustomerConfirmed(customerConfirmed != null ? customerConfirmed : false);
 
-        return mapToResponse(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+
+        // Thông báo cho chính nhân viên: đã nộp xong, chờ duyệt
+        notificationPublisher.publishNotification(
+                userId,
+                task.getTenant().getId(),
+                "⏳ Đã nộp - Chờ phê duyệt",
+                "Công việc '" + task.getTitle() + "' đã được nộp và đang chờ Admin xét duyệt.",
+                NotificationType.TASK_COMPLETED,
+                savedTask.getId());
+
+        return mapToResponse(savedTask);
     }
 
     public List<TaskResponse> getUnassignedTasks(Long tenantId) {
@@ -380,7 +391,18 @@ public class TaskServiceImpl implements ITaskService {
         task.setAssignee(user);
         task.setStatus(TaskStatus.IN_PROGRESS);
 
-        return mapToResponse(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+
+        // Thông báo cho nhân viên xác nhận họ đã nhận việc thành công
+        notificationPublisher.publishNotification(
+                userId,
+                task.getTenant().getId(),
+                "📋 Bạn đã nhận việc thành công",
+                "Bạn đã nhận công việc '" + task.getTitle() + "'. Hãy bắt đầu thực hiện!",
+                NotificationType.TASK_ASSIGNED,
+                savedTask.getId());
+
+        return mapToResponse(savedTask);
     }
 
     @Override
