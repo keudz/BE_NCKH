@@ -295,8 +295,8 @@ public class TaskServiceImpl implements ITaskService {
         // Cập nhật task
         task.setStatus(TaskStatus.CHECKED_IN);
         task.setCheckInTime(LocalDateTime.now());
-        // task.setCheckInLatitude(latitude);
-        // task.setCheckInLongitude(longitude);
+        task.setCheckInLatitude(latitude);
+        task.setCheckInLongitude(longitude);
         task.setCheckInPhoto(photoUrl);
         task.setCheckInNote(note);
 

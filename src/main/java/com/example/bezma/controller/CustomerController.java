@@ -86,6 +86,11 @@ public class CustomerController {
                 Customer customer = customerRepository.findById(id)
                                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
 
+                // Security Check: Ensure customer belongs to the current user's tenant
+                if (!customer.getTenant().getId().equals(currentUser.getTenant().getId())) {
+                        throw new RuntimeException("Bạn không có quyền chỉnh sửa khách hàng này");
+                }
+
                 customer.setName(request.getName());
                 customer.setPhoneNumber(request.getPhoneNumber());
                 customer.setCompanyName(request.getCompanyName());
@@ -101,8 +106,18 @@ public class CustomerController {
         }
 
         @DeleteMapping("/{id}")
-        public ApiResponse<Void> delete(@PathVariable Long id) {
-                customerRepository.deleteById(id);
+        public ApiResponse<Void> delete(
+                        @PathVariable Long id,
+                        @AuthenticationPrincipal User currentUser) {
+                Customer customer = customerRepository.findById(id)
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
+
+                // Security Check: Ensure customer belongs to the current user's tenant
+                if (!customer.getTenant().getId().equals(currentUser.getTenant().getId())) {
+                        throw new RuntimeException("Bạn không có quyền xóa khách hàng này");
+                }
+
+                customerRepository.delete(customer);
                 return ApiResponse.<Void>builder()
                                 .message("Xóa khách hàng thành công!")
                                 .build();
