@@ -21,7 +21,8 @@ public interface IUserService {
 
     void restoreUser(Long targetUserId);
 
-    void changePassword(String oldPassword, String newPassword);
+    void requestChangePasswordOTP();
+    void changePassword(String oldPassword, String newPassword, String otp);
     void activateUser(String token);
     
     UserSummaryResponse updateAvatar(MultipartFile file);

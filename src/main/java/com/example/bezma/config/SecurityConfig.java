@@ -47,6 +47,8 @@ public class SecurityConfig {
                                                                 "/api/auth/login/basic", // Đăng nhập
                                                                 "/api/auth/logout",
                                                                 "/api/auth/login/zalo",
+                                                                "/api/auth/forgot-password",
+                                                                "/api/auth/reset-password",
                                                                 "/api/v1/tenants/public/verify",
                                                                 "/api/v1/tenants/public/**",
                                                                 "/api/v1/users/public/**",

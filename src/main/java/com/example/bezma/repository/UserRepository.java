@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -49,19 +48,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
         Optional<User> findFirstByTenantId(@Param("tenantId") Long tenantId);
 
         @Query("SELECT u FROM User u " +
-                "LEFT JOIN FETCH u.tenant t " +
-                "LEFT JOIN FETCH u.role r " +
-                "LEFT JOIN FETCH r.permissions " +
-                "LEFT JOIN FETCH u.permissions " +
-                "WHERE u.zaloId = :zaloId")
+                        "LEFT JOIN FETCH u.tenant t " +
+                        "LEFT JOIN FETCH u.role r " +
+                        "WHERE u.zaloId = :zaloId")
         Optional<User> findByZaloId(@Param("zaloId") String zaloId);
 
         @Query("SELECT u FROM User u " +
-                "LEFT JOIN FETCH u.tenant t " +
-                "LEFT JOIN FETCH u.role r " +
-                "LEFT JOIN FETCH r.permissions " +
-                "LEFT JOIN FETCH u.permissions " +
-                "WHERE u.phone = :phone")
+                        "LEFT JOIN FETCH u.tenant t " +
+                        "LEFT JOIN FETCH u.role r " +
+                        "WHERE u.phone = :phone")
         Optional<User> findByPhone(@Param("phone") String phone);
 
         // Lấy toàn bộ danh sách nhân viên của 1 doanh nghiệp theo trạng thái xóa
@@ -71,15 +66,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
         List<User> findAllByTenantId(Long tenantId);
 
         // Thêm hàm này nếu chưa có để check trùng lặp khi đổi email
-        @Query("SELECT u FROM User u " +
-                "LEFT JOIN FETCH u.tenant t " +
-                "LEFT JOIN FETCH u.role r " +
-                "LEFT JOIN FETCH r.permissions " +
-                "LEFT JOIN FETCH u.permissions " +
-                "WHERE LOWER(u.email) = LOWER(:email)")
-        Optional<User> findByEmail(@Param("email") String email);
+        Optional<User> findByEmail(String email);
 
         Optional<User> findByIdAndTenantId(Long id, Long tenantId);
+
         long countByTenantId(Long tenantId);
 
         @Query("SELECT COUNT(u) FROM User u WHERE u.branch.id = :branchId")

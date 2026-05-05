@@ -37,6 +37,7 @@ public class UserServiceImpl implements IUserService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final CloudinaryService cloudinaryService;
+    private final org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
 
     private User getCurrentUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -284,17 +285,46 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     @Transactional
-    public void changePassword(String oldPassword, String newPassword) {
+    public void requestChangePasswordOTP() {
+        User user = getCurrentUser();
+        String otp = String.valueOf((int) (Math.random() * 900000) + 100000);
+        String key = "change_password:otp:" + user.getEmail();
+        
+        redisTemplate.opsForValue().set(key, otp, 10, java.util.concurrent.TimeUnit.MINUTES);
+        emailService.sendPasswordResetEmail(user.getEmail(), otp);
+        log.info("Mã OTP đổi mật khẩu đã được gửi tới email của user: {}", user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String oldPassword, String newPassword, String otp) {
         User user = getCurrentUser();
 
+        // 1. Kiểm tra OTP
+        String key = "change_password:otp:" + user.getEmail();
+        Object cachedOtp = redisTemplate.opsForValue().get(key);
+        
+        if (cachedOtp == null) {
+            throw new AppException(ErrorCode.TOKEN_EXPIRED);
+        }
+        if (!cachedOtp.toString().equals(otp)) {
+            throw new AppException(ErrorCode.INVALID_KEY);
+        }
+
+        // 2. Kiểm tra mật khẩu cũ
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             throw new AppException(ErrorCode.OLD_PASSWORD_INCORRECT);
         }
 
+        // 3. Cập nhật mật khẩu mới
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setMustChangePassword(false);
         userRepository.save(user);
-        log.info("User {} changed password successfully and reset mustChangePassword flag.", user.getUsername());
+        
+        // 4. Xóa OTP sau khi dùng
+        redisTemplate.delete(key);
+        
+        log.info("User {} changed password successfully using OTP.", user.getUsername());
     }
 
     @Override

@@ -60,6 +60,24 @@ public class UserController {
                 .build();
     }
 
+    @Operation(summary = "Đổi mật khẩu cho người dùng hiện tại")
+    @PostMapping("/profile/change-password")
+    public ApiResponse<Void> changePassword(@RequestBody @jakarta.validation.Valid com.example.bezma.dto.req.user.ChangePasswordRequest request) {
+        userService.changePassword(request.getOldPassword(), request.getNewPassword(), request.getOtp());
+        return ApiResponse.<Void>builder()
+                .message("Đổi mật khẩu thành công!")
+                .build();
+    }
+
+    @Operation(summary = "Yêu cầu mã OTP để đổi mật khẩu")
+    @PostMapping("/profile/change-password/otp")
+    public ApiResponse<Void> requestChangePasswordOTP() {
+        userService.requestChangePasswordOTP();
+        return ApiResponse.<Void>builder()
+                .message("Mã OTP đã được gửi tới email của bạn!")
+                .build();
+    }
+
     @Operation(summary = "Lấy danh sách nhân viên (0: Đang làm việc, 1: Đã xóa)")
     @GetMapping
     public ApiResponse<List<UserSummaryResponse>> getAllUsers(
