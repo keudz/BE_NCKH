@@ -21,4 +21,5 @@ public interface ITaskService {
     TaskResponse rejectTask(Long taskId, Long adminId, String reason);
     PageResponse<TaskResponse> getPendingReviewTasks(Long tenantId, int page, int size);
     List<TaskResponse> getPendingReviewTasks(Long tenantId);
+    TaskResponse getTaskById(Long taskId);
 }

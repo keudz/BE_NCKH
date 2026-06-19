@@ -34,6 +34,15 @@ public class TaskController {
                                 .build();
         }
 
+        @Operation(summary = "Lấy chi tiết một task theo ID")
+        @GetMapping("/{taskId}")
+        public ApiResponse<TaskResponse> getTaskById(@PathVariable Long taskId) {
+                return ApiResponse.<TaskResponse>builder()
+                                .data(taskService.getTaskById(taskId))
+                                .message("Lấy chi tiết công việc thành công!")
+                                .build();
+        }
+
         @Operation(summary = "Lấy tất cả task của dự án")
         @GetMapping("/project/{projectId}")
         public ApiResponse<List<TaskResponse>> getTasksByProject(@PathVariable Long projectId) {

@@ -46,6 +46,11 @@ public enum ErrorCode {
     FACE_ALREADY_REGISTERED(6003, "Khuôn mặt này đã được đăng ký trước đó. Không thể đăng ký lại.", HttpStatus.BAD_REQUEST),
     LOCATION_OUT_OF_RANGE(6004, "Vị trí của bạn nằm ngoài phạm vi cho phép điểm danh.", HttpStatus.BAD_REQUEST),
     TASK_LOCATION_OUT_OF_RANGE(6005, "Bạn đang ở quá xa vị trí yêu cầu để thực hiện công việc này.", HttpStatus.BAD_REQUEST),
+    ALREADY_CHECKED_IN(6006, "Bạn đã thực hiện check-in hôm nay rồi.", HttpStatus.BAD_REQUEST),
+    ALREADY_CHECKED_OUT(6007, "Bạn đã thực hiện check-out hôm nay rồi.", HttpStatus.BAD_REQUEST),
+    NOT_CHECKED_IN_YET(6008, "Bạn chưa thực hiện check-in. Vui lòng check-in trước.", HttpStatus.BAD_REQUEST),
+    AI_SERVICE_UNAVAILABLE(6009, "Hệ thống nhận diện khuôn mặt AI đang bận hoặc tạm thời không hoạt động. Vui lòng thử lại sau.", HttpStatus.SERVICE_UNAVAILABLE),
+    ATTENDANCE_RECORD_NOT_FOUND(6010, "Không tìm thấy bản ghi chấm công.", HttpStatus.NOT_FOUND),
     
     // --- 7. Nhóm Tài chính & Hóa đơn ---
     PRODUCT_NOT_FOUND(7001, "Sản phẩm không tồn tại trong kho", HttpStatus.NOT_FOUND),

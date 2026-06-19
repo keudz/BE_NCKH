@@ -33,6 +33,7 @@ build/
 .vscode
 .env
 .env.*
+!.env.example
 
 ### Python ###
 venv/
@@ -40,6 +41,8 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 temp_images/
+ai_service/models/
+ai_service/data/
 .python-version
 .pytest_cache/
 
@@ -48,8 +51,9 @@ temp_images/
 logs/
 temp/
 tmp/
-.DS_Store### Docker ###
+.DS_Store
 
+### Docker ###
 docker-compose.yml
 ai_agent_service/Dockerfile
 ai_service/Dockerfile

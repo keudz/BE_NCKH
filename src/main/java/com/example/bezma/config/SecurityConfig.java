@@ -1,6 +1,7 @@
 package com.example.bezma.config;
 
 import com.example.bezma.security.JwtAuthenticationFilter;
+import com.example.bezma.security.RateLimitingFilter;
 import lombok.RequiredArgsConstructor;
 //import org.example.be_eproject_sem4.Service.OAuth2.CustomOAuth2UserService;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +29,7 @@ import java.util.List;
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final RateLimitingFilter rateLimitingFilter;
         // private final CustomOAuth2UserService customOAuth2UserService;
         // private final OAuth2AuthenticationSuccessHandler
         // oAuth2AuthenticationSuccessHandler;
@@ -79,8 +81,9 @@ public class SecurityConfig {
                                 // "https://mystictarots.xyz/login?error=" + exception.getLocalizedMessage());
                                 // }))
 
-                                // Thêm JWT filter để kiểm tra token từ cookie
-                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                                 // Thêm Rate Limiting filter và JWT filter
+                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                                 .addFilterBefore(rateLimitingFilter, JwtAuthenticationFilter.class)
 
                                 // Xử lý lỗi 401 đẹp hơn cho API
                                 .exceptionHandling(exception -> exception

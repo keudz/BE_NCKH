@@ -300,7 +300,26 @@ public class TaskServiceImpl implements ITaskService {
         task.setCheckInPhoto(photoUrl);
         task.setCheckInNote(note);
 
-        return mapToResponse(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+
+        // Gửi thông báo cho toàn bộ Admin của Tenant khi nhân viên check-in
+        try {
+            List<User> admins = userRepository.findAdminsByTenantId(task.getTenant().getId());
+            String employeeName = task.getAssignee() != null ? task.getAssignee().getFullName() : "Nhân viên";
+            for (User admin : admins) {
+                notificationPublisher.publishNotification(
+                        admin.getId(),
+                        task.getTenant().getId(),
+                        "📍 Nhân viên đã check-in công việc",
+                        "Nhân viên " + employeeName + " đã check-in thực hiện công việc '" + task.getTitle() + "'.",
+                        NotificationType.TASK_UPDATED,
+                        savedTask.getId());
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo check-in cho Admin: {}", e.getMessage());
+        }
+
+        return mapToResponse(savedTask);
     }
 
     // private double calculateDistance(double lat1, double lon1, double lat2,
@@ -366,6 +385,23 @@ public class TaskServiceImpl implements ITaskService {
                 NotificationType.TASK_COMPLETED,
                 savedTask.getId());
 
+        // Gửi thông báo cho toàn bộ Admin của Tenant khi nhân viên hoàn thành công việc
+        try {
+            List<User> admins = userRepository.findAdminsByTenantId(task.getTenant().getId());
+            String employeeName = task.getAssignee() != null ? task.getAssignee().getFullName() : "Nhân viên";
+            for (User admin : admins) {
+                notificationPublisher.publishNotification(
+                        admin.getId(),
+                        task.getTenant().getId(),
+                        "📋 Công việc chờ phê duyệt",
+                        "Nhân viên " + employeeName + " đã hoàn thành công việc '" + task.getTitle() + "' và đang chờ bạn phê duyệt.",
+                        NotificationType.TASK_COMPLETED,
+                        savedTask.getId());
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo hoàn thành cho Admin: {}", e.getMessage());
+        }
+
         return mapToResponse(savedTask);
     }
 
@@ -401,6 +437,22 @@ public class TaskServiceImpl implements ITaskService {
                 "Bạn đã nhận công việc '" + task.getTitle() + "'. Hãy bắt đầu thực hiện!",
                 NotificationType.TASK_ASSIGNED,
                 savedTask.getId());
+
+        // Gửi thông báo cho toàn bộ Admin của Tenant khi nhân viên nhận công việc
+        try {
+            List<User> admins = userRepository.findAdminsByTenantId(task.getTenant().getId());
+            for (User admin : admins) {
+                notificationPublisher.publishNotification(
+                        admin.getId(),
+                        task.getTenant().getId(),
+                        "📋 Công việc đã được nhận",
+                        "Nhân viên " + user.getFullName() + " đã nhận công việc '" + task.getTitle() + "'.",
+                        NotificationType.TASK_ASSIGNED,
+                        savedTask.getId());
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi thông báo claim task cho Admin: {}", e.getMessage());
+        }
 
         return mapToResponse(savedTask);
     }
@@ -578,5 +630,18 @@ public class TaskServiceImpl implements ITaskService {
         return taskRepository.findByTenantIdAndStatus(tenantId, TaskStatus.REVIEW).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public TaskResponse getTaskById(Long taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_MESSAGE));
+
+        Long currentTenantId = com.example.bezma.util.TenantContext.getCurrentTenantId();
+        if (currentTenantId != null && !task.getTenant().getId().equals(currentTenantId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        return mapToResponse(task);
     }
 }

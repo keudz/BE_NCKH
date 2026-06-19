@@ -4,6 +4,7 @@ import com.example.bezma.entity.attendance.Attendance;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import com.example.bezma.entity.attendance.AttendanceStatus;
 import java.util.List;
 
 @Repository
@@ -17,4 +18,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> getTenantHistoryByMonth(@org.springframework.data.repository.query.Param("tenantId") Long tenantId, @org.springframework.data.repository.query.Param("month") int month, @org.springframework.data.repository.query.Param("year") int year);
 
     long countByTenantIdAndCheckTimeBetween(Long tenantId, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    boolean existsByUserIdAndStatusInAndCheckTimeBetween(Long userId, List<AttendanceStatus> statuses, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    List<Attendance> findByTenantIdAndCheckTimeBetweenOrderByCheckTimeDesc(Long tenantId, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

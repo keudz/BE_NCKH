@@ -7,6 +7,7 @@ public enum NotificationType {
     TASK_DELETED,
     TASK_APPROVED,
     TASK_REJECTED,
+    PROFILE_EDIT_GRANTED,
     GENERAL
 }
 

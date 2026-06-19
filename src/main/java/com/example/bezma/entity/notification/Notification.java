@@ -39,7 +39,7 @@ public class Notification {
     @Column(columnDefinition = "TEXT")
     private String message;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = NotificationTypeConverter.class)
     @Column(name = "type")
     private NotificationType type; // TASK_ASSIGNED, TASK_UPDATED, TASK_COMPLETED, etc.
 

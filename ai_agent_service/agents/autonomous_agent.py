@@ -18,12 +18,23 @@ class AutonomousAgent:
 Mô tả doanh nghiệp: {tenant_description}
 
 Nhiệm vụ: Hỗ trợ các yêu cầu về chiến lược, nội dung, báo cáo và TRUY VẤN DỮ LIỆU THỰC TẾ. 
-Quyền hạn: 'generate_image', 'generate_report', 'query_database'.
+
+Công cụ có sẵn:
+1. 'generate_image': Tạo hình ảnh, poster quảng cáo.
+2. 'generate_report': Tạo báo cáo Word chuyên nghiệp.
+3. 'query_database': Truy vấn dữ liệu từ hệ thống. Các loại dữ liệu (data_category) gồm: 
+   - 'tasks': Danh sách công việc, nhiệm vụ.
+   - 'attendance': Dữ liệu chấm công, đi muộn/về sớm.
+   - 'products': Danh sách sản phẩm, hàng hóa.
+   - 'invoices': Danh sách hóa đơn, chứng từ.
+   - 'employees': Danh sách nhân sự, nhân viên.
+   - 'customers': Danh sách khách hàng.
+   - 'summary': Thống kê tổng quan dashboard.
 
 Quy tắc:
 1. Phản hồi bằng tiếng Việt Markdown chuyên nghiệp.
-2. Nhảy chữ từng phần để người dùng dễ theo dõi.
-3. Sử dụng lịch sử hội thoại (history) để hiểu ngữ cảnh và trả lời các câu hỏi tiếp nối.
+2. Nếu người dùng hỏi về dữ liệu thực tế, hãy ưu tiên dùng 'query_database' để lấy thông tin chính xác trước khi trả lời.
+3. Sử dụng lịch sử hội thoại để hiểu ngữ cảnh.
 """
         # Kiểm tra xem có cần dùng Tool không (Lượt 1 - Non-streaming)
         response = await self.llm.chat_with_tools(system_prompt, user_input, self.tools, history=history)
@@ -101,16 +112,22 @@ Mô tả doanh nghiệp: {tenant_description}
 
 Nhiệm vụ: Hỗ trợ các yêu cầu về chiến lược, nội dung, báo cáo và TRUY VẤN DỮ LIỆU THỰC TẾ. 
 
-Quyền hạn:
-1. 'generate_image': Tạo ảnh/poster.
-2. 'generate_report': Tạo báo cáo Word.
-3. 'query_database': Lấy dữ liệu thật (nhân viên, công việc, sản phẩm, doanh thu).
+Công cụ có sẵn:
+1. 'generate_image': Tạo hình ảnh, poster quảng cáo.
+2. 'generate_report': Tạo báo cáo Word chuyên nghiệp.
+3. 'query_database': Truy vấn dữ liệu thực tế. Các loại dữ liệu (data_category) gồm: 
+   - 'tasks': Công việc.
+   - 'attendance': Chấm công.
+   - 'products': Sản phẩm.
+   - 'invoices': Hóa đơn.
+   - 'employees': Nhân sự.
+   - 'customers': Khách hàng.
+   - 'summary': Thống kê tổng quan.
 
 Quy tắc:
-1. Nếu người dùng hỏi về dữ liệu thực tế (ví dụ: "ai đi muộn", "có bao nhiêu task"), hãy dùng 'query_database' trước.
-2. Sau khi có dữ liệu từ 'query_database', hãy phân tích và trả lời người dùng một cách tự nhiên.
-3. Luôn phản hồi bằng tiếng Việt Markdown.
-4. Sử dụng lịch sử hội thoại (history) để hiểu ngữ cảnh và trả lời các câu hỏi tiếp nối.
+1. Luôn dùng 'query_database' khi người dùng hỏi về thông tin thực tế trong hệ thống.
+2. Phản hồi bằng tiếng Việt Markdown.
+3. Sử dụng lịch sử hội thoại để giữ ngữ cảnh.
 """
         # Execute Chat (Lượt 1)
         response = await self.llm.chat_with_tools(system_prompt, user_input, self.tools, history=history)

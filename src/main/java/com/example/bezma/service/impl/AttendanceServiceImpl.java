@@ -6,6 +6,10 @@ import com.example.bezma.entity.tenant.Tenant;
 import com.example.bezma.entity.user.User;
 import com.example.bezma.exception.AppException;
 import com.example.bezma.common.enumCom.ErrorCode;
+import com.example.bezma.dto.req.attendance.ManualAttendanceRequest;
+import com.example.bezma.dto.req.attendance.UpdateAttendanceRequest;
+import com.example.bezma.dto.res.attendance.AttendanceReportResponse;
+import com.example.bezma.dto.res.attendance.AttendanceStatsResponse;
 import com.example.bezma.repository.AttendanceRepository;
 import com.example.bezma.repository.UserRepository;
 import com.example.bezma.service.iService.IAttendanceService;
@@ -24,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,6 +36,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +60,6 @@ public class AttendanceServiceImpl implements IAttendanceService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // 0. Kiểm tra xem người dùng đã đăng ký chưa
         if (Boolean.TRUE.equals(user.getIsFaceRegistered())) {
             throw new AppException(ErrorCode.FACE_ALREADY_REGISTERED);
         }
@@ -64,7 +69,6 @@ public class AttendanceServiceImpl implements IAttendanceService {
         }
 
         try {
-            // 1. Gửi danh sách ảnh sang AI Service để lấy Embedding trung bình
             String url = aiServiceUrl + "/extract-embeddings";
 
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -94,7 +98,6 @@ public class AttendanceServiceImpl implements IAttendanceService {
                         new TypeReference<List<Double>>() {
                         });
 
-                // 2. Lưu Embedding vào MySQL dưới dạng JSON String
                 String embeddingJson = objectMapper.writeValueAsString(embedding);
                 user.setFaceEmbedding(embeddingJson);
                 user.setIsFaceRegistered(true);
@@ -108,6 +111,9 @@ public class AttendanceServiceImpl implements IAttendanceService {
         } catch (HttpClientErrorException.BadRequest e) {
             log.error("AI Service - Lỗi xử lý: {}", e.getMessage());
             throw new AppException(ErrorCode.FACE_NOT_DETECTED);
+        } catch (ResourceAccessException e) {
+            log.error("AI Service kết nối thất bại (timeout): {}", e.getMessage());
+            throw new AppException(ErrorCode.AI_SERVICE_UNAVAILABLE);
         } catch (Exception e) {
             log.error("AI Service Error: {}", e.getMessage());
             throw new AppException(ErrorCode.AI_SERVICE_ERROR);
@@ -116,7 +122,6 @@ public class AttendanceServiceImpl implements IAttendanceService {
 
     @Override
     public Attendance checkIn(Long userId, MultipartFile photo, BigDecimal lat, BigDecimal lon) {
-        // 1. Load user (READ-ONLY, không cần transaction)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
@@ -124,19 +129,25 @@ public class AttendanceServiceImpl implements IAttendanceService {
             throw new AppException(ErrorCode.FACE_NOT_DETECTED);
         }
 
-        Tenant tenant = user.getTenant();
+        // Chống check-in trùng lặp
+        LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
+        LocalDateTime endOfDay = LocalDateTime.now().with(LocalTime.MAX);
+        boolean alreadyCheckedIn = attendanceRepository.existsByUserIdAndStatusInAndCheckTimeBetween(
+                userId,
+                List.of(AttendanceStatus.ON_TIME, AttendanceStatus.LATE, AttendanceStatus.SUCCESS),
+                startOfDay,
+                endOfDay
+        );
+        if (alreadyCheckedIn) {
+            throw new AppException(ErrorCode.ALREADY_CHECKED_IN);
+        }
 
-        // 2. GEOFENCING: Kiểm tra vị trí TRƯỚC khi gọi AI (tiết kiệm tài nguyên)
+        Tenant tenant = user.getTenant();
         validateLocation(tenant, lat, lon);
 
-        // 3. Lưu ảnh bằng chứng (I/O thuần, không cần transaction)
         String photoUrl = saveEvidencePhoto("checkin", userId, photo);
-
-        // 4. Gọi AI Service để verify khuôn mặt (HTTP call, KHÔNG nằm trong
-        // transaction)
         boolean faceVerified = verifyFaceWithAI(photo, user.getFaceEmbedding());
 
-        // 5. Xác định trạng thái điểm danh
         AttendanceStatus status;
         String note = null;
 
@@ -158,13 +169,11 @@ public class AttendanceServiceImpl implements IAttendanceService {
             note = "Khuôn mặt không khớp với dữ liệu đã đăng ký";
         }
 
-        // 6. CHỈ phần save mới cần transaction (ngắn gọn, nhanh)
         return saveAttendanceRecord(user, tenant, lat, lon, photoUrl, status, note);
     }
 
     @Override
     public Attendance checkOut(Long userId, MultipartFile photo, BigDecimal lat, BigDecimal lon) {
-        // 1. Load user (READ-ONLY)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
@@ -172,18 +181,37 @@ public class AttendanceServiceImpl implements IAttendanceService {
             throw new AppException(ErrorCode.FACE_NOT_DETECTED);
         }
 
-        Tenant tenant = user.getTenant();
+        LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
+        LocalDateTime endOfDay = LocalDateTime.now().with(LocalTime.MAX);
 
-        // 2. GEOFENCING: Kiểm tra vị trí
+        // Chống check-out trùng lặp
+        boolean alreadyCheckedOut = attendanceRepository.existsByUserIdAndStatusInAndCheckTimeBetween(
+                userId,
+                List.of(AttendanceStatus.CHECK_OUT, AttendanceStatus.EARLY_LEAVE),
+                startOfDay,
+                endOfDay
+        );
+        if (alreadyCheckedOut) {
+            throw new AppException(ErrorCode.ALREADY_CHECKED_OUT);
+        }
+
+        // Yêu cầu phải check-in trước
+        boolean hasCheckedIn = attendanceRepository.existsByUserIdAndStatusInAndCheckTimeBetween(
+                userId,
+                List.of(AttendanceStatus.ON_TIME, AttendanceStatus.LATE, AttendanceStatus.SUCCESS),
+                startOfDay,
+                endOfDay
+        );
+        if (!hasCheckedIn) {
+            throw new AppException(ErrorCode.NOT_CHECKED_IN_YET);
+        }
+
+        Tenant tenant = user.getTenant();
         validateLocation(tenant, lat, lon);
 
-        // 3. Lưu ảnh bằng chứng
         String photoUrl = saveEvidencePhoto("checkout", userId, photo);
-
-        // 4. Gọi AI Service (NGOÀI transaction)
         boolean faceVerified = verifyFaceWithAI(photo, user.getFaceEmbedding());
 
-        // 5. Xác định trạng thái
         AttendanceStatus status;
         String note = null;
 
@@ -206,7 +234,6 @@ public class AttendanceServiceImpl implements IAttendanceService {
             note = "Khuôn mặt không khớp với dữ liệu đã đăng ký";
         }
 
-        // 6. Save (trong transaction ngắn)
         return saveAttendanceRecord(user, tenant, lat, lon, photoUrl, status, note);
     }
 
@@ -226,18 +253,180 @@ public class AttendanceServiceImpl implements IAttendanceService {
     }
 
     // ==========================================
+    // ADMIN PHASE 2 METHODS
+    // ==========================================
+
+    @Override
+    public List<Attendance> getTodayAttendance(Long tenantId) {
+        LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
+        LocalDateTime endOfDay = LocalDateTime.now().with(LocalTime.MAX);
+        return attendanceRepository.findByTenantIdAndCheckTimeBetweenOrderByCheckTimeDesc(tenantId, startOfDay, endOfDay);
+    }
+
+    @Override
+    public AttendanceStatsResponse getTodayStats(Long tenantId) {
+        List<User> activeEmployees = userRepository.findAllByTenantIdAndIsDeleted(tenantId, false);
+        long totalEmployees = activeEmployees.size();
+
+        List<Attendance> todayRecords = getTodayAttendance(tenantId);
+
+        long presentCount = todayRecords.stream()
+                .filter(r -> List.of(AttendanceStatus.ON_TIME, AttendanceStatus.LATE, AttendanceStatus.SUCCESS).contains(r.getStatus()))
+                .map(r -> r.getUser().getId())
+                .distinct()
+                .count();
+
+        long lateCount = todayRecords.stream()
+                .filter(r -> r.getStatus() == AttendanceStatus.LATE)
+                .map(r -> r.getUser().getId())
+                .distinct()
+                .count();
+
+        long earlyLeaveCount = todayRecords.stream()
+                .filter(r -> r.getStatus() == AttendanceStatus.EARLY_LEAVE)
+                .map(r -> r.getUser().getId())
+                .distinct()
+                .count();
+
+        long absentCount = Math.max(0, totalEmployees - presentCount);
+
+        return AttendanceStatsResponse.builder()
+                .totalEmployees(totalEmployees)
+                .presentCount(presentCount)
+                .lateCount(lateCount)
+                .earlyLeaveCount(earlyLeaveCount)
+                .absentCount(absentCount)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public Attendance createManualAttendance(Long tenantId, ManualAttendanceRequest request) {
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (!user.getTenant().getId().equals(tenantId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        LocalDateTime checkTime = request.getCheckTime() != null ? request.getCheckTime() : LocalDateTime.now();
+        LocalDateTime startOfDay = checkTime.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
+
+        AttendanceStatus status;
+        String note = request.getNote();
+        if (note == null || note.isEmpty()) {
+            note = "Admin chấm công thủ công";
+        } else {
+            note = "Admin chấm công thủ công: " + note;
+        }
+
+        if ("CHECK_IN".equalsIgnoreCase(request.getType())) {
+            boolean alreadyCheckedIn = attendanceRepository.existsByUserIdAndStatusInAndCheckTimeBetween(
+                    user.getId(),
+                    List.of(AttendanceStatus.ON_TIME, AttendanceStatus.LATE, AttendanceStatus.SUCCESS),
+                    startOfDay,
+                    endOfDay
+            );
+            if (alreadyCheckedIn) {
+                throw new AppException(ErrorCode.ALREADY_CHECKED_IN);
+            }
+            status = request.getStatus() != null ? AttendanceStatus.valueOf(request.getStatus()) : AttendanceStatus.ON_TIME;
+        } else {
+            boolean alreadyCheckedOut = attendanceRepository.existsByUserIdAndStatusInAndCheckTimeBetween(
+                    user.getId(),
+                    List.of(AttendanceStatus.CHECK_OUT, AttendanceStatus.EARLY_LEAVE),
+                    startOfDay,
+                    endOfDay
+            );
+            if (alreadyCheckedOut) {
+                throw new AppException(ErrorCode.ALREADY_CHECKED_OUT);
+            }
+            status = request.getStatus() != null ? AttendanceStatus.valueOf(request.getStatus()) : AttendanceStatus.CHECK_OUT;
+        }
+
+        Attendance attendance = Attendance.builder()
+                .user(user)
+                .tenant(user.getTenant())
+                .checkTime(checkTime)
+                .status(status)
+                .note(note)
+                .build();
+
+        return attendanceRepository.save(attendance);
+    }
+
+    @Override
+    @Transactional
+    public Attendance updateAttendance(Long id, UpdateAttendanceRequest request) {
+        Attendance attendance = attendanceRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.ATTENDANCE_RECORD_NOT_FOUND));
+
+        if (request.getStatus() != null) {
+            attendance.setStatus(AttendanceStatus.valueOf(request.getStatus()));
+        }
+        if (request.getCheckTime() != null) {
+            attendance.setCheckTime(request.getCheckTime());
+        }
+        
+        String updatedNote = "Admin chỉnh sửa";
+        if (request.getNote() != null && !request.getNote().isEmpty()) {
+            updatedNote += ": " + request.getNote();
+        }
+        attendance.setNote(updatedNote);
+
+        return attendanceRepository.save(attendance);
+    }
+
+    @Override
+    public List<AttendanceReportResponse> getMonthlyReport(Long tenantId, int month, int year) {
+        List<User> users = userRepository.findAllByTenantIdAndIsDeleted(tenantId, false);
+        List<AttendanceReportResponse> reports = new ArrayList<>();
+
+        for (User user : users) {
+            List<Attendance> userRecords = attendanceRepository.getHistoryByUserAndMonth(user.getId(), month, year);
+
+            long totalWorkingDays = userRecords.stream()
+                    .filter(r -> List.of(AttendanceStatus.ON_TIME, AttendanceStatus.LATE, AttendanceStatus.SUCCESS).contains(r.getStatus()))
+                    .map(r -> r.getCheckTime().toLocalDate())
+                    .distinct()
+                    .count();
+
+            long onTimeCount = userRecords.stream()
+                    .filter(r -> r.getStatus() == AttendanceStatus.ON_TIME || r.getStatus() == AttendanceStatus.SUCCESS)
+                    .count();
+
+            long lateCount = userRecords.stream()
+                    .filter(r -> r.getStatus() == AttendanceStatus.LATE)
+                    .count();
+
+            long earlyLeaveCount = userRecords.stream()
+                    .filter(r -> r.getStatus() == AttendanceStatus.EARLY_LEAVE)
+                    .count();
+
+            reports.add(AttendanceReportResponse.builder()
+                    .userId(user.getId())
+                    .fullName(user.getFullName())
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .totalWorkingDays(totalWorkingDays)
+                    .onTimeCount(onTimeCount)
+                    .lateCount(lateCount)
+                    .earlyLeaveCount(earlyLeaveCount)
+                    .build());
+        }
+
+        return reports;
+    }
+
+    // ==========================================
     // PRIVATE HELPER METHODS
     // ==========================================
 
-    /**
-     * Kiểm tra vị trí GPS của nhân viên có nằm trong bán kính cho phép không.
-     * Nếu Tenant chưa cấu hình tọa độ văn phòng → bỏ qua (cho phép điểm danh ở bất
-     * kỳ đâu).
-     */
     private void validateLocation(Tenant tenant, BigDecimal lat, BigDecimal lon) {
         if (tenant.getOfficeLatitude() == null || tenant.getOfficeLongitude() == null) {
             log.warn("Tenant {} chưa cấu hình tọa độ văn phòng, bỏ qua kiểm tra vị trí.", tenant.getId());
-            return; // Chưa cấu hình → skip, không block user
+            return;
         }
 
         double allowedRadius = (tenant.getAllowedRadius() != null) ? tenant.getAllowedRadius() : 200.0;
@@ -257,10 +446,6 @@ public class AttendanceServiceImpl implements IAttendanceService {
         }
     }
 
-    /**
-     * Lưu ảnh bằng chứng điểm danh vào thư mục uploads/.
-     * Trả về đường dẫn tương đối của file ảnh.
-     */
     private String saveEvidencePhoto(String prefix, Long userId, MultipartFile photo) {
         if (photo == null || photo.isEmpty())
             return null;
@@ -272,13 +457,6 @@ public class AttendanceServiceImpl implements IAttendanceService {
         }
     }
 
-    /**
-     * Gọi AI Service để verify khuôn mặt.
-     * Method này KHÔNG có @Transactional → không giữ DB connection trong khi chờ
-     * HTTP.
-     *
-     * @return true nếu khuôn mặt khớp, false nếu không khớp hoặc lỗi
-     */
     private boolean verifyFaceWithAI(MultipartFile photo, String storedEmbedding) {
         try {
             String url = aiServiceUrl + "/verify-with-embedding";
@@ -312,16 +490,15 @@ public class AttendanceServiceImpl implements IAttendanceService {
         } catch (HttpClientErrorException.BadRequest e) {
             log.error("AI Verification - Không thấy mặt: {}", e.getMessage());
             return false;
+        } catch (ResourceAccessException e) {
+            log.error("AI Verification - Không thể kết nối AI Service (timeout): {}", e.getMessage());
+            throw new AppException(ErrorCode.AI_SERVICE_UNAVAILABLE);
         } catch (Exception e) {
             log.error("Lỗi gọi AI Service: {}", e.getMessage());
             return false;
         }
     }
 
-    /**
-     * Lưu bản ghi Attendance vào DB. Chỉ method này cần @Transactional.
-     * Transaction rất ngắn (chỉ 1 lệnh INSERT), không giữ connection lâu.
-     */
     @Transactional
     protected Attendance saveAttendanceRecord(User user, Tenant tenant,
             BigDecimal lat, BigDecimal lon,
