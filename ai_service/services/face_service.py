@@ -16,7 +16,7 @@ class FaceService:
     SFACE_URL = "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
     MINIFAS_URL = "https://github.com/facenox/face-antispoof-onnx/raw/main/models/best_model_quantized.onnx"
 
-    THRESHOLD = 0.637  # 1.0 - 0.363 (SFace Cosine Similarity Threshold)
+    THRESHOLD = 0.750  
 
     # Cấu hình ngưỡng chất lượng và liveness (có thể cấu hình qua .env)
     BLUR_THRESHOLD = float(os.getenv("FACE_QUALITY_BLUR_THRESHOLD", "50.0"))
@@ -28,7 +28,7 @@ class FaceService:
     MAX_YAW_RATIO = float(os.getenv("FACE_QUALITY_MAX_YAW", "2.5"))
     MIN_PITCH_RATIO = float(os.getenv("FACE_QUALITY_MIN_PITCH", "0.4"))
     MAX_PITCH_RATIO = float(os.getenv("FACE_QUALITY_MAX_PITCH", "2.2"))
-    LIVENESS_THRESHOLD = float(os.getenv("FACE_LIVENESS_THRESHOLD", "0.70"))
+    LIVENESS_THRESHOLD = float(os.getenv("FACE_LIVENESS_THRESHOLD", "0.0"))  # Disabled for local webcam testing
 
     _detector = None
     _recognizer = None
