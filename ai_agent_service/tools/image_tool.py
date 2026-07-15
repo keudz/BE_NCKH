@@ -1,28 +1,21 @@
-from tools.base import BaseTool, ToolDefinition
+import contextvars
 from services.image_generator import ImageGenerator
 from core.config import settings
 
-class ImageTool(BaseTool):
-    def __init__(self, image_gen: ImageGenerator):
-        super().__init__()
-        self.image_gen = image_gen
+# Context variable to capture generated image url
+generated_image_url_var = contextvars.ContextVar("generated_image_url", default=None)
 
-    def get_definition(self) -> ToolDefinition:
-        return ToolDefinition(
-            name="generate_image",
-            description="Tạo hình ảnh quảng cáo hoặc poster dựa trên mô tả chi tiết.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "prompt": {
-                        "type": "string",
-                        "description": "Mô tả chi tiết hình ảnh cần tạo (tiếng Anh hoặc tiếng Việt)."
-                    }
-                },
-                "required": ["prompt"]
-            }
-        )
+image_gen = ImageGenerator(provider=settings.IMAGE_PROVIDER, api_key=settings.IMAGE_API_KEY)
 
-    async def run(self, prompt: str) -> str:
-        url = await self.image_gen.generate(prompt)
-        return f"Đã tạo ảnh thành công. URL: {url}"
+async def generate_image(prompt: str) -> dict:
+    """Tạo hình ảnh quảng cáo hoặc poster dựa trên mô tả chi tiết.
+    
+    Args:
+        prompt: Mô tả chi tiết hình ảnh cần tạo (bằng tiếng Anh hoặc tiếng Việt).
+    """
+    try:
+        url = await image_gen.generate(prompt)
+        generated_image_url_var.set(url)
+        return {"status": "success", "image_url": url, "message": f"Đã tạo ảnh thành công. URL: {url}"}
+    except Exception as e:
+        return {"status": "error", "message": f"Lỗi khi tạo ảnh: {str(e)}"}

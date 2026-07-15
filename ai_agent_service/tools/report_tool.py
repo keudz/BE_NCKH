@@ -1,35 +1,26 @@
 import time
-from tools.base import BaseTool, ToolDefinition
+import contextvars
 from services.document_service import DocumentService
 
-class ReportTool(BaseTool):
-    def __init__(self):
-        super().__init__()
-        self.doc_service = DocumentService()
+# Request-scoped context
+tenant_name_var = contextvars.ContextVar("tenant_name", default="Doanh nghiệp")
+generated_report_url_var = contextvars.ContextVar("generated_report_url", default=None)
 
-    def get_definition(self) -> ToolDefinition:
-        return ToolDefinition(
-            name="generate_report",
-            description="Tạo báo cáo doanh nghiệp chuyên nghiệp dưới dạng file Word (.docx).",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "content": {
-                        "type": "string",
-                        "description": "Nội dung báo cáo chi tiết (Markdown format)."
-                    },
-                    "title": {
-                        "type": "string",
-                        "description": "Tiêu đề của báo cáo."
-                    }
-                },
-                "required": ["content"]
-            }
-        )
+doc_service = DocumentService()
 
-    async def run(self, content: str, title: str = "Báo cáo doanh nghiệp", tenant_name: str = "Doanh nghiệp") -> str:
-        import time
+async def generate_report(content: str, title: str = "Báo cáo doanh nghiệp") -> dict:
+    """Tạo báo cáo doanh nghiệp chuyên nghiệp dưới dạng file Word (.docx).
+    
+    Args:
+        content: Nội dung báo cáo chi tiết dưới định dạng Markdown.
+        title: Tiêu đề của báo cáo.
+    """
+    tenant_name = tenant_name_var.get()
+    try:
         filename = f"BAO_CAO_{tenant_name}_{int(time.time())}.docx"
-        filepath = self.doc_service.generate_docx(content, filename, title)
+        filepath = doc_service.generate_docx(content, filename, title)
         url = f"http://localhost:8001/static/{filename}"
-        return f"Đã tạo báo cáo thành công. Người dùng có thể tải về tại: {url}"
+        generated_report_url_var.set(url)
+        return {"status": "success", "report_url": url, "message": f"Đã tạo báo cáo thành công. Người dùng có thể tải về tại: {url}"}
+    except Exception as e:
+        return {"status": "error", "message": f"Lỗi khi tạo báo cáo: {str(e)}"}
